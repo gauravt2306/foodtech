@@ -7,6 +7,7 @@ public interface IOrderRepository
 {
     Task<Order?> GetByIdAsync(string id, CancellationToken ct = default);
     Task<Order?> GetByOrderNumberAsync(string orderNumber, CancellationToken ct = default);
+    Task<Order?> GetByPaymentIdAsync(string paymentId, CancellationToken ct = default);
     Task<IEnumerable<Order>> GetByEmployeeIdAsync(string employeeId, CancellationToken ct = default);
     Task<IEnumerable<Order>> GetByVendorIdAsync(string vendorId, CancellationToken ct = default);
     Task<IEnumerable<Order>> GetByVendorIdAndStatusAsync(string vendorId, OrderStatus status, CancellationToken ct = default);

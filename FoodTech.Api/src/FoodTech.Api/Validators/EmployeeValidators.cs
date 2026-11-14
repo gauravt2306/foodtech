@@ -47,3 +47,32 @@ public class PayOrderRequestValidator : AbstractValidator<PayOrderRequest>
             .When(x => !string.IsNullOrEmpty(x.PaymentId));
     }
 }
+
+public class UpiPaymentInitiateRequestValidator : AbstractValidator<UpiPaymentInitiateRequest>
+{
+    public UpiPaymentInitiateRequestValidator()
+    {
+        RuleFor(x => x.OrderId)
+            .NotEmpty().WithMessage("Order ID is required");
+
+        RuleFor(x => x.UpiVpa)
+            .NotEmpty().WithMessage("UPI VPA is required")
+            .Matches(@"^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$")
+            .WithMessage("Invalid UPI VPA format (e.g., user@upi)");
+    }
+}
+
+public class UpiPaymentCallbackRequestValidator : AbstractValidator<UpiPaymentCallbackRequest>
+{
+    public UpiPaymentCallbackRequestValidator()
+    {
+        RuleFor(x => x.TransactionRef)
+            .NotEmpty().WithMessage("Transaction reference is required");
+
+        RuleFor(x => x.Status)
+            .NotEmpty().WithMessage("Status is required")
+            .Must(s => s.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase) ||
+                       s.Equals("FAILURE", StringComparison.OrdinalIgnoreCase))
+            .WithMessage("Status must be SUCCESS or FAILURE");
+    }
+}

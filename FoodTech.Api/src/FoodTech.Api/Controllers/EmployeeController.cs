@@ -21,6 +21,8 @@ public class EmployeeController : ControllerBase
     private readonly IQRService _qrService;
     private readonly CreateOrderRequestValidator _createOrderValidator;
     private readonly PayOrderRequestValidator _payOrderValidator;
+    private readonly UpiPaymentInitiateRequestValidator _upiInitiateValidator;
+    private readonly UpiPaymentCallbackRequestValidator _upiCallbackValidator;
 
     public EmployeeController(
         IVendorProfileRepository vendorProfileRepository,
@@ -28,7 +30,9 @@ public class EmployeeController : ControllerBase
         IOrderRepository orderRepository,
         IQRService qrService,
         CreateOrderRequestValidator createOrderValidator,
-        PayOrderRequestValidator payOrderValidator)
+        PayOrderRequestValidator payOrderValidator,
+        UpiPaymentInitiateRequestValidator upiInitiateValidator,
+        UpiPaymentCallbackRequestValidator upiCallbackValidator)
     {
         _vendorProfileRepository = vendorProfileRepository;
         _menuItemRepository = menuItemRepository;
@@ -36,6 +40,8 @@ public class EmployeeController : ControllerBase
         _qrService = qrService;
         _createOrderValidator = createOrderValidator;
         _payOrderValidator = payOrderValidator;
+        _upiInitiateValidator = upiInitiateValidator;
+        _upiCallbackValidator = upiCallbackValidator;
     }
 
     private string GetEmployeeId()
@@ -218,6 +224,115 @@ public class EmployeeController : ControllerBase
 
         var dto = updated.Adapt<EmployeeOrderDto>();
         return Ok(ApiResponse<EmployeeOrderDto>.Ok(dto, Request.Path));
+    }
+
+    [HttpPost("orders/{id}/upi/initiate")]
+    public async Task<IActionResult> InitiateUpiPayment(string id, [FromBody] UpiPaymentInitiateRequest request)
+    {
+        var validationResult = await _upiInitiateValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+            return BadRequest(ApiResponse<object>.Error("VALIDATION_ERROR", "Validation failed", Request.Path, errors));
+        }
+
+        var employeeId = GetEmployeeId();
+        var order = await _orderRepository.GetByIdAsync(id);
+
+        if (order == null || order.EmployeeId != employeeId)
+        {
+            return NotFound(ApiResponse<object>.Error("NOT_FOUND", "Order not found", Request.Path));
+        }
+
+        if (order.PaymentStatus == PaymentStatus.Paid)
+        {
+            return BadRequest(ApiResponse<object>.Error("VALIDATION_ERROR", "Order already paid", Request.Path));
+        }
+
+        if (order.PaymentMethod != PaymentMethod.Upi)
+        {
+            return BadRequest(ApiResponse<object>.Error("VALIDATION_ERROR", "Order payment method is not UPI", Request.Path));
+        }
+
+        var transactionRef = $"UPI_{order.OrderNumber}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
+        // Generate UPI deep link: upi://pay?pa=<vpa>&pn=FoodTech&am=<amount>&cu=INR&tn=<note>&tr=<ref>
+        var amountInRupees = order.Total / 100m; // Convert paise to rupees
+        var upiDeepLink = $"upi://pay?pa={Uri.EscapeDataString(request.UpiVpa)}" +
+            $"&pn=FoodTech%20Order%20{order.OrderNumber}" +
+            $"&am={amountInRupees:F2}" +
+            $"&cu=INR" +
+            $"&tn=Order%20{order.OrderNumber}" +
+            $"&tr={Uri.EscapeDataString(transactionRef)}";
+
+        order.PaymentId = transactionRef;
+        await _orderRepository.UpdateAsync(order);
+
+        var response = new UpiPaymentInitiateResponse(
+            upiDeepLink,
+            order.Id,
+            order.Total,
+            transactionRef
+        );
+
+        return Ok(ApiResponse<UpiPaymentInitiateResponse>.Ok(response, Request.Path));
+    }
+
+    [HttpPost("upi/callback")]
+    [AllowAnonymous] // UPI gateway calls this endpoint
+    public async Task<IActionResult> UpiCallback([FromBody] UpiPaymentCallbackRequest request)
+    {
+        var validationResult = await _upiCallbackValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+            return BadRequest(ApiResponse<object>.Error("VALIDATION_ERROR", "Validation failed", Request.Path, errors));
+        }
+
+        // Find order by transaction reference (PaymentId)
+        var order = await _orderRepository.GetByPaymentIdAsync(request.TransactionRef);
+
+        if (order == null)
+        {
+            return NotFound(ApiResponse<object>.Error("NOT_FOUND", "Order not found for transaction", Request.Path));
+        }
+
+        if (order.PaymentStatus == PaymentStatus.Paid)
+        {
+            return Ok(ApiResponse<object>.Ok(new { message = "Payment already processed" }, Request.Path));
+        }
+
+        // Mock UPI gateway response handling
+        var isSuccess = request.Status.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase);
+
+        if (isSuccess)
+        {
+            order.PaymentStatus = PaymentStatus.Paid;
+            order.PaymentId = request.UpiTransactionId ?? request.TransactionRef;
+            order.Status = OrderStatus.Confirmed;
+        }
+        else
+        {
+            order.PaymentStatus = PaymentStatus.Failed;
+            order.Status = OrderStatus.Cancelled;
+        }
+
+        await _orderRepository.UpdateAsync(order);
+
+        var response = new
+        {
+            Success = isSuccess,
+            OrderId = order.Id,
+            OrderNumber = order.OrderNumber,
+            PaymentStatus = order.PaymentStatus.ToString(),
+            UpiTransactionId = request.UpiTransactionId
+        };
+
+        return Ok(ApiResponse<object>.Ok(response, Request.Path));
     }
 
     [HttpGet("orders/{id}/qr")]

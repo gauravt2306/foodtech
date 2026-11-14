@@ -43,7 +43,30 @@ public record CreateOrderResponse(
 );
 
 public record PayOrderRequest(
-    string PaymentId
+    string PaymentId,
+    string? UpiTransactionId,
+    string? UpiVpa,
+    string? PayerName
+);
+
+public record UpiPaymentInitiateRequest(
+    string OrderId,
+    string UpiVpa
+);
+
+public record UpiPaymentInitiateResponse(
+    string UpiDeepLink,
+    string OrderId,
+    long Amount,
+    string TransactionRef
+);
+
+public record UpiPaymentCallbackRequest(
+    string TransactionRef,
+    string UpiTransactionId,
+    string Status,
+    string? PayerName,
+    string? PayerVpa
 );
 
 public record QrCodeResponse(

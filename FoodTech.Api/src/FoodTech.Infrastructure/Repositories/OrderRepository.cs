@@ -26,6 +26,11 @@ public class OrderRepository : IOrderRepository
         return await _orders.Find(o => o.OrderNumber == orderNumber).FirstOrDefaultAsync(ct);
     }
 
+    public async Task<Order?> GetByPaymentIdAsync(string paymentId, CancellationToken ct = default)
+    {
+        return await _orders.Find(o => o.PaymentId == paymentId).FirstOrDefaultAsync(ct);
+    }
+
     public async Task<IEnumerable<Order>> GetByEmployeeIdAsync(string employeeId, CancellationToken ct = default)
     {
         return await _orders.Find(o => o.EmployeeId == employeeId)
