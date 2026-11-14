@@ -1,0 +1,13 @@
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.csproj.AssemblyReference.cache
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.AssemblyInfoInputs.cache
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.AssemblyInfo.cs
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.csproj.CoreCompileInputs.cache
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.sourcelink.json
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/bin/Debug/net10.0/FoodTech.Domain.deps.json
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/bin/Debug/net10.0/FoodTech.Domain.dll
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/bin/Debug/net10.0/FoodTech.Domain.pdb
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.dll
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/refint/FoodTech.Domain.dll
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.pdb
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/ref/FoodTech.Domain.dll

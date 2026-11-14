@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="FoodTech.Api/FoodTech.Api.csproj" />
+  <Project Path="FoodTech.Domain/FoodTech.Domain.csproj" />
+  <Project Path="FoodTech.Infrastructure/FoodTech.Infrastructure.csproj" />
+</Solution>

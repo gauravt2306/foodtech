@@ -1,0 +1,46 @@
+# Build outputs
+bin/
+obj/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Certificates (should be mounted as secrets)
+certs/
+*.pem
+*.crt
+*.key
+
+# Test results
+TestResults/
+*.trx
+
+# Coverage
+coverage/
+
+# NuGet
+packages/
+*.nupkg
+
+# Temporary files
+*.tmp
+*.temp

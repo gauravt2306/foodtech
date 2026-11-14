@@ -1,0 +1,16 @@
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/bin/Debug/net10.0/FoodTech.Infrastructure.deps.json
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/bin/Debug/net10.0/FoodTech.Infrastructure.dll
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/bin/Debug/net10.0/FoodTech.Infrastructure.pdb
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/bin/Debug/net10.0/FoodTech.Domain.dll
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/bin/Debug/net10.0/FoodTech.Domain.pdb
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.Infrastructure.csproj.AssemblyReference.cache
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.Infrastructure.AssemblyInfoInputs.cache
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.Infrastructure.AssemblyInfo.cs
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.Infrastructure.csproj.CoreCompileInputs.cache
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.Infrastructure.sourcelink.json
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.FC0AD710.Up2Date
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.Infrastructure.dll
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/refint/FoodTech.Infrastructure.dll
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.Infrastructure.pdb
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/ref/FoodTech.Infrastructure.dll
