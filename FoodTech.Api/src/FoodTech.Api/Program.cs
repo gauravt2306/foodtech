@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FoodTech.Infrastructure;
 using FoodTech.Infrastructure.Auth;
+using FoodTech.Infrastructure.Data;
 using FoodTech.Api.Middleware;
 using FoodTech.Api.Validators;
 using FluentValidation;
