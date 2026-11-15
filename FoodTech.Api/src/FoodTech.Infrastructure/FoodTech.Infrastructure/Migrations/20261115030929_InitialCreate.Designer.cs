@@ -4,17 +4,20 @@ using FoodTech.Domain.Entities;
 using FoodTech.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace FoodTech.Infrastructure.Migrations
+namespace FoodTech.Infrastructure.FoodTech.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261115030929_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -192,7 +195,7 @@ namespace FoodTech.Infrastructure.Migrations
 
                     b.HasIndex("PaymentId")
                         .IsUnique()
-                        .HasFilter("payment_id IS NOT NULL");
+                        .HasFilter("\"PaymentId\" IS NOT NULL");
 
                     b.HasIndex("EmployeeId", "CreatedAt");
 
@@ -266,7 +269,7 @@ namespace FoodTech.Infrastructure.Migrations
 
                     b.HasIndex("Phone")
                         .IsUnique()
-                        .HasFilter("phone IS NOT NULL");
+                        .HasFilter("\"Phone\" IS NOT NULL");
 
                     b.HasIndex("Role", "IsActive");
 
@@ -348,7 +351,7 @@ namespace FoodTech.Infrastructure.Migrations
 
                     b.HasIndex("GstNumber")
                         .IsUnique()
-                        .HasFilter("gst_number IS NOT NULL");
+                        .HasFilter("\"GstNumber\" IS NOT NULL");
 
                     b.HasIndex("UserId")
                         .IsUnique();

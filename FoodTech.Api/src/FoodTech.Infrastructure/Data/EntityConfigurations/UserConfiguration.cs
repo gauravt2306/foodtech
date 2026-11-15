@@ -34,7 +34,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(20);
         builder.HasIndex(u => u.Phone)
             .IsUnique()
-            .HasFilter("phone IS NOT NULL");
+            .HasFilter("\"Phone\" IS NOT NULL");
 
         builder.Property(u => u.AvatarUrl)
             .HasMaxLength(500);

@@ -72,7 +72,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .HasMaxLength(100);
         builder.HasIndex(o => o.PaymentId)
             .IsUnique()
-            .HasFilter("payment_id IS NOT NULL");
+            .HasFilter("\"PaymentId\" IS NOT NULL");
 
         builder.Property(o => o.QrCodeData)
             .HasMaxLength(1000);

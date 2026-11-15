@@ -30,7 +30,7 @@ public class VendorProfileConfiguration : IEntityTypeConfiguration<VendorProfile
             .HasMaxLength(50);
         builder.HasIndex(v => v.GstNumber)
             .IsUnique()
-            .HasFilter("gst_number IS NOT NULL");
+            .HasFilter("\"GstNumber\" IS NOT NULL");
 
         builder.Property(v => v.Description)
             .HasMaxLength(1000);
