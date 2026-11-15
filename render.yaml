@@ -14,10 +14,6 @@ services:
         value: http://+:8080
       - key: ConnectionStrings__MongoDB
         sync: false
-      - key: MongoDb__ClientCertificatePath
-        value: /etc/secrets/client.pem
-      - key: MongoDb__ClientCertificatePassword
-        value: ""
       - key: JwtSettings__Secret
         sync: false
       - key: JwtSettings__Issuer
@@ -28,9 +24,6 @@ services:
         value: "60"
       - key: QR__SecretKey
         sync: false
-    secretFiles:
-      - key: client.pem
-        path: /etc/secrets/client.pem
     scaling:
       minInstances: 1
       maxInstances: 1
