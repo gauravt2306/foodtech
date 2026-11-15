@@ -13,9 +13,9 @@ services:
       - key: ASPNETCORE_URLS
         value: http://+:8080
       - key: ConnectionStrings__PostgreSql
-        sync: false
+        value: "Host=dpg-dbsjd8lg1s2s73fc72d0-a;Port=5432;Database=foodtech_7rat;Username=foodtech_7rat_user;Password=4ZRyeEcTkCABnVXw91kL3r5LwUfbEnMs;SSL Mode=Require;Trust Server Certificate=true"
       - key: PostgreSql__ConnectionString
-        sync: false
+        value: "Host=dpg-dbsjd8lg1s2s73fc72d0-a;Port=5432;Database=foodtech_7rat;Username=foodtech_7rat_user;Password=4ZRyeEcTkCABnVXw91kL3r5LwUfbEnMs;SSL Mode=Require;Trust Server Certificate=true"
       - key: JwtSettings__Secret
         sync: false
       - key: JwtSettings__Issuer
