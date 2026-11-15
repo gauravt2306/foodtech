@@ -98,7 +98,8 @@ var app = builder.Build();
 // Initialize Database (run migrations)
 using (var scope = app.Services.CreateScope())
 {
-    await scope.ServiceProvider.GetRequiredService<IServiceCollection>().InitializeDatabaseAsync();
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await context.Database.MigrateAsync();
 }
 
 // Configure the HTTP request pipeline
