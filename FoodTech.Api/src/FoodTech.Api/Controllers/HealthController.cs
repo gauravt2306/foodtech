@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
+using Microsoft.EntityFrameworkCore;
 using FoodTech.Api.Models;
 using FoodTech.Infrastructure.Data;
 
@@ -11,9 +11,9 @@ namespace FoodTech.Api.Controllers;
 [AllowAnonymous]
 public class HealthController : ControllerBase
 {
-    private readonly MongoDbContext _context;
+    private readonly AppDbContext _context;
 
-    public HealthController(MongoDbContext context)
+    public HealthController(AppDbContext context)
     {
         _context = context;
     }
@@ -25,7 +25,7 @@ public class HealthController : ControllerBase
         try
         {
             // Try to ping the database
-            await _context.Users.Database.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1));
+            await _context.Database.ExecuteSqlRawAsync("SELECT 1");
             dbConnected = true;
         }
         catch

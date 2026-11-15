@@ -24,6 +24,7 @@ public interface IAuthService
 
     Task<User?> GetCurrentUserAsync(string userId, CancellationToken ct = default);
     Task<bool> RevokeRefreshTokenAsync(string userId, CancellationToken ct = default);
+    Task<bool> ChangePasswordAsync(string userId, string currentPassword, string newPassword, CancellationToken ct = default);
     string HashPassword(string password);
     bool VerifyPassword(string password, string hash);
 }

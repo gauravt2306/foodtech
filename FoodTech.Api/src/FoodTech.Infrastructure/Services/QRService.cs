@@ -9,6 +9,11 @@ namespace FoodTech.Infrastructure.Services;
 public class QRService : IQRService
 {
     private readonly string _secretKey;
+    private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
 
     public QRService(IConfiguration configuration)
     {
@@ -26,7 +31,7 @@ public class QRService : IQRService
             expiry = DateTimeOffset.UtcNow.AddMinutes(30).ToUnixTimeSeconds()
         };
 
-        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        var json = System.Text.Json.JsonSerializer.Serialize(payload, _jsonOptions);
         var tokenBytes = Encoding.UTF8.GetBytes(json);
         var base64Token = Convert.ToBase64String(tokenBytes);
 
@@ -59,19 +64,23 @@ public class QRService : IQRService
             var expectedHash = hmac.ComputeHash(tokenBytes);
             var providedHash = Convert.FromBase64String(base64Hash);
 
-            if (!CryptographicOperations.FixedTimeEquals(expectedHash, providedHash))
+            var hmacValid = CryptographicOperations.FixedTimeEquals(expectedHash, providedHash);
+            Console.WriteLine($"[QRService] HMAC valid: {hmacValid}, secretKey: {_secretKey}");
+            if (!hmacValid)
             {
                 return false;
             }
 
             // Parse payload
             var json = Encoding.UTF8.GetString(tokenBytes);
-            var payload = System.Text.Json.JsonSerializer.Deserialize<QrPayload>(json);
+            var payload = System.Text.Json.JsonSerializer.Deserialize<QrPayload>(json, _jsonOptions);
 
             if (payload == null) return false;
 
             // Check expiry
-            if (payload.Expiry < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            Console.WriteLine($"[QRService] Token expiry: {payload.Expiry}, current time: {now}, valid: {payload.Expiry >= now}");
+            if (payload.Expiry < now)
             {
                 return false;
             }
@@ -80,8 +89,9 @@ public class QRService : IQRService
             vendorId = payload.VendorId;
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[QRService] Exception: {ex.Message}");
             return false;
         }
     }

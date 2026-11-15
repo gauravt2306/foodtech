@@ -2,6 +2,13 @@ using FoodTech.Domain.Enums;
 
 namespace FoodTech.Api.Models;
 
+public record CreateVendorProfileRequest(
+    string BusinessName,
+    string GstNumber,
+    AddressDto Address,
+    OperatingHoursDto OperatingHours
+);
+
 public record UpdateVendorProfileRequest(
     string BusinessName,
     string GstNumber,

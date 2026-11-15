@@ -16,17 +16,20 @@ public class AuthController : ControllerBase
     private readonly RegisterRequestValidator _registerValidator;
     private readonly LoginRequestValidator _loginValidator;
     private readonly RefreshTokenRequestValidator _refreshValidator;
+    private readonly ChangePasswordRequestValidator _changePasswordValidator;
 
     public AuthController(
         IAuthService authService,
         RegisterRequestValidator registerValidator,
         LoginRequestValidator loginValidator,
-        RefreshTokenRequestValidator refreshValidator)
+        RefreshTokenRequestValidator refreshValidator,
+        ChangePasswordRequestValidator changePasswordValidator)
     {
         _authService = authService;
         _registerValidator = registerValidator;
         _loginValidator = loginValidator;
         _refreshValidator = refreshValidator;
+        _changePasswordValidator = changePasswordValidator;
     }
 
     [HttpPost("register")]
@@ -133,6 +136,48 @@ public class AuthController : ControllerBase
 
         var response = new MeResponse(userDto, vendorProfileDto);
         return Ok(ApiResponse<MeResponse>.Ok(response, Request.Path));
+    }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout()
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(ApiResponse<object>.Error("UNAUTHORIZED", "Invalid token", Request.Path));
+        }
+
+        await _authService.RevokeRefreshTokenAsync(userId);
+        return Ok(ApiResponse<object>.Ok(new { message = "Logged out successfully" }, Request.Path));
+    }
+
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        var validationResult = await _changePasswordValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+            return BadRequest(ApiResponse<object>.Error("VALIDATION_ERROR", "Validation failed", Request.Path, errors));
+        }
+
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(ApiResponse<object>.Error("UNAUTHORIZED", "Invalid token", Request.Path));
+        }
+
+        var success = await _authService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
+        if (!success)
+        {
+            return BadRequest(ApiResponse<object>.Error("VALIDATION_ERROR", "Current password is incorrect", Request.Path));
+        }
+
+        return Ok(ApiResponse<object>.Ok(new { message = "Password changed successfully" }, Request.Path));
     }
 
     private static UserDto MapToUserDto(User user)

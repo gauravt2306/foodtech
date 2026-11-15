@@ -1,4 +1,3 @@
-/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.csproj.AssemblyReference.cache
 /var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.GeneratedMSBuildEditorConfig.editorconfig
 /var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.AssemblyInfoInputs.cache
 /var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Domain/obj/Debug/net10.0/FoodTech.Domain.AssemblyInfo.cs

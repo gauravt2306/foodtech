@@ -69,3 +69,8 @@ public record OperatingHoursDto(
     string Open,
     string Close
 );
+
+public record ChangePasswordRequest(
+    string CurrentPassword,
+    string NewPassword
+);

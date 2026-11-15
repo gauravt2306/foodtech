@@ -4,6 +4,29 @@ using FoodTech.Domain.Enums;
 
 namespace FoodTech.Api.Validators;
 
+public class CreateVendorProfileRequestValidator : AbstractValidator<CreateVendorProfileRequest>
+{
+    public CreateVendorProfileRequestValidator()
+    {
+        RuleFor(x => x.BusinessName)
+            .NotEmpty().WithMessage("Business name is required")
+            .MaximumLength(150).WithMessage("Business name must not exceed 150 characters");
+
+        RuleFor(x => x.GstNumber)
+            .NotEmpty().WithMessage("GST number is required")
+            .Matches(@"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$")
+            .WithMessage("Invalid GST number format");
+
+        RuleFor(x => x.Address)
+            .NotNull().WithMessage("Address is required")
+            .SetValidator(new AddressDtoValidator());
+
+        RuleFor(x => x.OperatingHours)
+            .NotNull().WithMessage("Operating hours is required")
+            .SetValidator(new OperatingHoursDtoValidator());
+    }
+}
+
 public class UpdateVendorProfileRequestValidator : AbstractValidator<UpdateVendorProfileRequest>
 {
     public UpdateVendorProfileRequestValidator()

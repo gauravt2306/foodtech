@@ -1,6 +1,5 @@
 using FoodTech.Domain.Entities;
 using FoodTech.Domain.Enums;
-using MongoDB.Driver;
 
 namespace FoodTech.Domain.Repositories;
 

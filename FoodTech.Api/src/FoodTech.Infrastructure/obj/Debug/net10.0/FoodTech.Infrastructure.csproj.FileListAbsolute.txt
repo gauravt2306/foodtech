@@ -14,3 +14,5 @@
 /var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/refint/FoodTech.Infrastructure.dll
 /var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.Infrastructure.pdb
 /var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/ref/FoodTech.Infrastructure.dll
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/bin/Debug/net10.0/FoodTech.Infrastructure.runtimeconfig.json
+/var/home/bazzite/Projects/foodtech/FoodTech.Api/src/FoodTech.Infrastructure/obj/Debug/net10.0/FoodTech.Infrastructure.genruntimeconfig.cache

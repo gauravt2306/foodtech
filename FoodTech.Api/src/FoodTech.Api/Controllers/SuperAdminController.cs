@@ -66,6 +66,34 @@ public class SuperAdminController : ControllerBase
         return Ok(ApiResponse<List<SuperAdminVendorDto>>.Ok(dtos, Request.Path));
     }
 
+    [HttpGet("vendors/{id}")]
+    public async Task<IActionResult> GetVendor(string id)
+    {
+        var vendor = await _vendorProfileRepository.GetByIdAsync(id);
+        if (vendor == null)
+        {
+            return NotFound(ApiResponse<object>.Error("NOT_FOUND", "Vendor not found", Request.Path));
+        }
+
+        var user = await _userRepository.GetByIdAsync(vendor.UserId);
+        var dto = new SuperAdminVendorDto(
+            vendor.Id,
+            vendor.UserId,
+            user?.Email ?? "",
+            user?.Name ?? "",
+            vendor.BusinessName,
+            vendor.GstNumber,
+            vendor.IsApproved,
+            vendor.ApprovedBy,
+            vendor.ApprovedAt,
+            vendor.Rating,
+            vendor.TotalOrders,
+            vendor.CreatedAt
+        );
+
+        return Ok(ApiResponse<SuperAdminVendorDto>.Ok(dto, Request.Path));
+    }
+
     [HttpPatch("vendors/{id}/approve")]
     public async Task<IActionResult> ApproveVendor(string id, [FromBody] ApproveVendorRequest request)
     {

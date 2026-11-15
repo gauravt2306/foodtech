@@ -37,7 +37,7 @@ public record CreateOrderResponse(
     string OrderId,
     string OrderNumber,
     long Subtotal,
-    long Tax,
+    long TaxAmount,
     long Total,
     string QrCodeData
 );
@@ -81,7 +81,7 @@ public record EmployeeOrderDto(
     OrderItemDto[] Items,
     OrderStatus Status,
     long Subtotal,
-    long Tax,
+    long TaxAmount,
     long Total,
     PaymentMethod PaymentMethod,
     PaymentStatus PaymentStatus,

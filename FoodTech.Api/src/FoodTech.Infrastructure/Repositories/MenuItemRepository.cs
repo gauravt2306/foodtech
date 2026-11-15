@@ -1,4 +1,4 @@
-using MongoDB.Driver;
+using Microsoft.EntityFrameworkCore;
 using FoodTech.Domain.Entities;
 using FoodTech.Domain.Enums;
 using FoodTech.Domain.Repositories;
@@ -8,69 +8,79 @@ namespace FoodTech.Infrastructure.Repositories;
 
 public class MenuItemRepository : IMenuItemRepository
 {
-    private readonly IMongoCollection<MenuItem> _menuItems;
+    private readonly AppDbContext _context;
 
-    public MenuItemRepository(MongoDbContext context)
+    public MenuItemRepository(AppDbContext context)
     {
-        _menuItems = context.MenuItems;
+        _context = context;
     }
 
     public async Task<MenuItem?> GetByIdAsync(string id, CancellationToken ct = default)
     {
-        return await _menuItems.Find(m => m.Id == id).FirstOrDefaultAsync(ct);
+        return await _context.MenuItems.FirstOrDefaultAsync(m => m.Id == id, ct);
     }
 
     public async Task<IEnumerable<MenuItem>> GetByVendorIdAsync(string vendorId, CancellationToken ct = default)
     {
-        return await _menuItems.Find(m => m.VendorId == vendorId).ToListAsync(ct);
+        return await _context.MenuItems
+            .Where(m => m.VendorId == vendorId)
+            .ToListAsync(ct);
     }
 
     public async Task<IEnumerable<MenuItem>> GetByVendorIdAndCategoryAsync(string vendorId, Category category, CancellationToken ct = default)
     {
-        return await _menuItems.Find(m => m.VendorId == vendorId && m.Category == category).ToListAsync(ct);
+        return await _context.MenuItems
+            .Where(m => m.VendorId == vendorId && m.Category == category)
+            .ToListAsync(ct);
     }
 
     public async Task<IEnumerable<MenuItem>> GetAvailableByVendorIdAsync(string vendorId, CancellationToken ct = default)
     {
-        return await _menuItems.Find(m => m.VendorId == vendorId && m.IsAvailable).ToListAsync(ct);
+        return await _context.MenuItems
+            .Where(m => m.VendorId == vendorId && m.IsAvailable)
+            .ToListAsync(ct);
     }
 
     public async Task<IEnumerable<MenuItem>> GetAvailableByVendorIdAndCategoryAsync(string vendorId, Category category, CancellationToken ct = default)
     {
-        return await _menuItems.Find(m => m.VendorId == vendorId && m.IsAvailable && m.Category == category).ToListAsync(ct);
+        return await _context.MenuItems
+            .Where(m => m.VendorId == vendorId && m.IsAvailable && m.Category == category)
+            .ToListAsync(ct);
     }
 
     public async Task<MenuItem> CreateAsync(MenuItem menuItem, CancellationToken ct = default)
     {
         menuItem.CreatedAt = DateTime.UtcNow;
         menuItem.UpdatedAt = DateTime.UtcNow;
-        await _menuItems.InsertOneAsync(menuItem, cancellationToken: ct);
+        _context.MenuItems.Add(menuItem);
+        await _context.SaveChangesAsync(ct);
         return menuItem;
     }
 
     public async Task<MenuItem?> UpdateAsync(MenuItem menuItem, CancellationToken ct = default)
     {
         menuItem.UpdatedAt = DateTime.UtcNow;
-        var result = await _menuItems.ReplaceOneAsync(m => m.Id == menuItem.Id, menuItem, cancellationToken: ct);
-        return result.ModifiedCount > 0 ? menuItem : null;
+        _context.MenuItems.Update(menuItem);
+        var result = await _context.SaveChangesAsync(ct);
+        return result > 0 ? menuItem : null;
     }
 
     public async Task<bool> DeleteAsync(string id, CancellationToken ct = default)
     {
-        var result = await _menuItems.DeleteOneAsync(m => m.Id == id, cancellationToken: ct);
-        return result.DeletedCount > 0;
+        var menuItem = await _context.MenuItems.FirstOrDefaultAsync(m => m.Id == id, ct);
+        if (menuItem == null) return false;
+        _context.MenuItems.Remove(menuItem);
+        var result = await _context.SaveChangesAsync(ct);
+        return result > 0;
     }
 
     public async Task<bool> ExistsAsync(string id, CancellationToken ct = default)
     {
-        var filter = Builders<MenuItem>.Filter.Eq(m => m.Id, id);
-        var count = await _menuItems.CountDocumentsAsync(filter, cancellationToken: ct);
-        return count > 0;
+        return await _context.MenuItems.AnyAsync(m => m.Id == id, ct);
     }
 
     public async Task<long> CountByVendorIdAsync(string vendorId, CancellationToken ct = default)
     {
-        var filter = Builders<MenuItem>.Filter.Eq(m => m.VendorId, vendorId);
-        return await _menuItems.CountDocumentsAsync(filter, cancellationToken: ct);
+        return await _context.MenuItems.LongCountAsync(m => m.VendorId == vendorId, ct);
     }
 }

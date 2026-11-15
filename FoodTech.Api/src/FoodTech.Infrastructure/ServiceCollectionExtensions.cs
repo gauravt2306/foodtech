@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using FoodTech.Domain.Repositories;
@@ -14,14 +15,14 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         // Configure settings
-        services.Configure<MongoDbSettings>(configuration.GetSection(MongoDbSettings.SectionName));
+        services.Configure<PostgreSqlSettings>(configuration.GetSection(PostgreSqlSettings.SectionName));
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
 
-        // Register MongoDB context
-        services.AddSingleton<MongoDbContext>(sp =>
+        // Register EF Core DbContext
+        services.AddDbContext<AppDbContext>((sp, options) =>
         {
-            var settings = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<MongoDbSettings>>().Value;
-            return new MongoDbContext(settings);
+            var settings = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<PostgreSqlSettings>>().Value;
+            options.UseNpgsql(settings.ConnectionString);
         });
 
         // Register repositories
@@ -38,11 +39,11 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static async Task<IServiceCollection> InitializeMongoDbAsync(this IServiceCollection services)
+    public static async Task<IServiceCollection> InitializeDatabaseAsync(this IServiceCollection services)
     {
         using var scope = services.BuildServiceProvider().CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
-        await context.CreateIndexesAsync();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await context.Database.MigrateAsync();
         return services;
     }
 }

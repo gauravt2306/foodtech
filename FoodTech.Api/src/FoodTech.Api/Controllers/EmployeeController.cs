@@ -136,8 +136,8 @@ public class EmployeeController : ControllerBase
             subtotal += menuItem.Price * itemRequest.Quantity;
         }
 
-        var tax = (long)Math.Round(subtotal * 0.05m); // 5% GST
-        var total = subtotal + tax;
+        var taxAmount = (long)Math.Round(subtotal * 0.05m); // 5% GST
+        var total = subtotal + taxAmount;
 
         var order = new Order
         {
@@ -146,7 +146,7 @@ public class EmployeeController : ControllerBase
             Items = orderItems.ToArray(),
             Status = OrderStatus.Pending,
             Subtotal = subtotal,
-            Tax = tax,
+            TaxAmount = taxAmount,
             Total = total,
             PaymentMethod = request.PaymentMethod,
             PaymentStatus = PaymentStatus.Pending,
@@ -170,7 +170,7 @@ public class EmployeeController : ControllerBase
             created.Id,
             created.OrderNumber,
             created.Subtotal,
-            created.Tax,
+            created.TaxAmount,
             created.Total,
             created.QrCodeData
         );
@@ -185,6 +185,46 @@ public class EmployeeController : ControllerBase
         var orders = await _orderRepository.GetByEmployeeIdAsync(employeeId);
         var dtos = orders.Select(o => o.Adapt<EmployeeOrderDto>()).ToArray();
         return Ok(ApiResponse<EmployeeOrderDto[]>.Ok(dtos, Request.Path));
+    }
+
+    [HttpGet("vendors/{id}")]
+    public async Task<IActionResult> GetVendor(string id)
+    {
+        var vendor = await _vendorProfileRepository.GetByIdAsync(id);
+        if (vendor == null || !vendor.IsApproved)
+        {
+            return NotFound(ApiResponse<object>.Error("NOT_FOUND", "Vendor not found or not approved", Request.Path));
+        }
+
+        var menuCount = await _menuItemRepository.CountByVendorIdAsync(vendor.Id);
+        var dto = new VendorListItemDto(
+            vendor.Id,
+            vendor.BusinessName,
+            vendor.GstNumber,
+            vendor.Address.Adapt<AddressDto>(),
+            vendor.OperatingHours.Adapt<OperatingHoursDto>(),
+            vendor.IsApproved,
+            vendor.Rating,
+            vendor.TotalOrders,
+            (int)menuCount
+        );
+
+        return Ok(ApiResponse<VendorListItemDto>.Ok(dto, Request.Path));
+    }
+
+    [HttpGet("orders/{id}")]
+    public async Task<IActionResult> GetOrder(string id)
+    {
+        var employeeId = GetEmployeeId();
+        var order = await _orderRepository.GetByIdAsync(id);
+
+        if (order == null || order.EmployeeId != employeeId)
+        {
+            return NotFound(ApiResponse<object>.Error("NOT_FOUND", "Order not found", Request.Path));
+        }
+
+        var dto = order.Adapt<EmployeeOrderDto>();
+        return Ok(ApiResponse<EmployeeOrderDto>.Ok(dto, Request.Path));
     }
 
     [HttpPost("orders/{id}/pay")]

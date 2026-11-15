@@ -1,6 +1,6 @@
-# FoodTech Backend (.NET 10) - Render Deployment Guide
+# FoodTech Backend (.NET 10) - Render Deployment Guide (X.509 Certificate Auth)
 
-This guide provides steps for deploying the FoodTech .NET 10 backend API to Render using Docker.
+This guide provides steps for deploying the FoodTech .NET 10 backend API to Render using Docker with MongoDB X.509 certificate authentication.
 
 ---
 
@@ -9,199 +9,238 @@ This guide provides steps for deploying the FoodTech .NET 10 backend API to Rend
 ```bash
 # 1. Push to GitHub
 git add .
-git commit -m "Prepare for Render deployment"
+git commit -m "Prepare for Render deployment with X.509 auth"
 git push origin main
 
-# 2. Connect repository to Render (Dashboard or CLI)
-# 3. Configure environment variables
-# 4. Deploy!
+# 2. Generate X.509 certificates for MongoDB Atlas
+# 3. Configure MongoDB Atlas for X.509 authentication
+# 4. Add certificates as Secret Files in Render
+# 5. Deploy!
+```
+
+---
+
+## MongoDB Atlas X.509 Setup (Required First)
+
+### 1. Generate Client Certificate
+
+```bash
+# Generate private key and CSR
+openssl req -newkey rsa:2048 -nodes -keyout client.key -out client.csr -subj "/CN=foodtech-client"
+
+# Generate self-signed certificate (valid 1 year)
+openssl x509 -req -in client.csr -signkey client.key -out client.crt -days 365
+
+# Combine into PEM format (certificate + private key)
+cat client.crt client.key > client.pem
+
+# Download MongoDB Atlas CA certificate
+# Go to Atlas → Connect → Drivers → C# → "I need the CA file"
+# Or download from: https://www.mongodb.com/docs/atlas/security-x509/#download-the-ca-certificate
+# Save as ca.pem
+```
+
+### 2. Configure MongoDB Atlas
+
+1. **Security** → **Authentication** → **Enable X.509 Authentication**
+2. **Database Access** → **Add New Database User** → **X.509**
+   - Username: `CN=foodtech-client` (must match certificate CN)
+   - Database User Privileges: `Atlas admin` or custom role with readWrite
+3. **Network Access** → **Add IP Address** → `0.0.0.0/0` (Allow from anywhere)
+4. **Clusters** → **Connect** → **Drivers** → **C# / .NET Standard 2.1+**
+   - Copy connection string (NO password, uses `authSource=%24external&authMechanism=MONGODB-X509`)
+
+**Connection String Format:**
+```
+mongodb+srv://cluster0.abc123.mongodb.net/foodtech?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority
 ```
 
 ---
 
 ## Render Service Configuration
 
-### Service Settings (via `render.yaml`)
+### render.yaml (already configured)
 
-| Setting | Value |
-|---------|-------|
-| **Name** | `foodtech-api` |
-| **Runtime** | `docker` |
-| **Region** | `Oregon (US West)` |
-| **Branch** | `main` |
-| **Dockerfile** | `FoodTech.Api/Dockerfile` |
-| **Docker Context** | `FoodTech.Api` |
-| **Health Check Path** | `/health` |
-| **Auto-Deploy** | `Yes` |
-| **Plan** | `Free` (512 MB RAM, shared CPU) |
+```yaml
+services:
+  - type: web
+    name: foodtech-api
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./FoodTech.Api/Dockerfile
+    dockerContext: ./FoodTech.Api
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:8080
+      - key: ConnectionStrings__MongoDB
+        sync: false
+      - key: MongoDb__ClientCertificatePath
+        value: /etc/secrets/client.pem
+      - key: MongoDb__ClientCertificatePassword
+        value: ""
+      - key: JwtSettings__Secret
+        sync: false
+      - key: JwtSettings__Issuer
+        value: foodtech-api
+      - key: JwtSettings__Audience
+        value: foodtech-app
+      - key: JwtSettings__AccessTokenExpiryMinutes
+        value: "60"
+      - key: QR__SecretKey
+        sync: false
+    secretFiles:
+      - key: client.pem
+        path: /etc/secrets/client.pem
+      - key: ca.pem
+        path: /etc/secrets/ca.pem
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+```
 
 ---
 
-## Environment Variables
+## Environment Variables (Render Dashboard → Environment)
 
-### Required Variables (set in Render Dashboard → Environment)
+### Non-Secret Variables
+
+| Key | Value |
+|-----|-------|
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
+| `ASPNETCORE_URLS` | `http://+:8080` |
+| `MongoDb__ClientCertificatePath` | `/etc/secrets/client.pem` |
+| `MongoDb__ClientCertificatePassword` | *(empty)* |
+| `JwtSettings__Issuer` | `foodtech-api` |
+| `JwtSettings__Audience` | `foodtech-app` |
+| `JwtSettings__AccessTokenExpiryMinutes` | `60` |
+
+### Secret Variables (Mark "Secret" checkbox)
+
+| Key | Value |
+|-----|-------|
+| `ConnectionStrings__MongoDB` | `mongodb+srv://cluster0.abc123.mongodb.net/foodtech?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority` |
+| `JwtSettings__Secret` | `DEe7MzNbgCYlVXmmxFXeyWbiPV6I2a4H6gdylfVV6iiRRTaGlWyJeu1LlyMNOC2g` |
+| `QR__SecretKey` | `64B9u6hZTxFkNq8P2GduEDHsbDqiJ3mq` |
+
+---
+
+## Secret Files (Render Dashboard → Environment → Secret Files)
+
+**Add two secret files:**
+
+| Key | Path | Content |
+|-----|------|---------|
+| `client.pem` | `/etc/secrets/client.pem` | Your `client.pem` (cert + private key) |
+| `ca.pem` | `/etc/secrets/ca.pem` | MongoDB Atlas CA certificate |
+
+### Certificate Format
+
+**client.pem** (PEM with private key):
+```
+-----BEGIN CERTIFICATE-----
+MIIF...
+...
+-----END CERTIFICATE-----
+-----BEGIN PRIVATE KEY-----
+MIIE...
+...
+-----END PRIVATE KEY-----
+```
+
+**ca.pem** (CA certificate only):
+```
+-----BEGIN CERTIFICATE-----
+MIID...
+...
+-----END CERTIFICATE-----
+```
+
+---
+
+## Complete .env Reference (for local development)
 
 ```env
-# ASP.NET Core
+# FoodTech .NET 10 Backend - Environment Variables (X.509 Certificate Auth)
+# ============================================
+
+# ASP.NET Core Configuration
 ASPNETCORE_ENVIRONMENT=Production
 ASPNETCORE_URLS=http://+:8080
 
-# MongoDB (use MongoDB Atlas Free M0 cluster)
-ConnectionStrings__MongoDB=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/foodtech?retryWrites=true&w=majority
+# MongoDB Connection (X.509 Certificate Authentication)
+ConnectionStrings__MongoDB=mongodb+srv://cluster0.abc123.mongodb.net/foodtech?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority
 
-# JWT Authentication (generate secure secrets)
-JwtSettings__Secret=<64-char-base64-string-min-32-chars>
+# MongoDB X.509 Certificate Settings
+MongoDb__ClientCertificatePath=/etc/secrets/client.pem
+MongoDb__ClientCertificatePassword=
+
+# JWT Authentication
+JwtSettings__Secret=DEe7MzNbgCYlVXmmxFXeyWbiPV6I2a4H6gdylfVV6iiRRTaGlWyJeu1LlyMNOC2g
 JwtSettings__Issuer=foodtech-api
 JwtSettings__Audience=foodtech-app
 JwtSettings__AccessTokenExpiryMinutes=60
 
 # QR Code Signing
-QR__SecretKey=<32-char-secret-key>
+QR__SecretKey=64B9u6hZTxFkNq8P2GduEDHsbDqiJ3mq
 ```
-
-### Generate Secrets
-
-```bash
-# JWT Secret (64 chars base64)
-openssl rand -base64 48
-
-# QR Secret Key (32 chars)
-openssl rand -base64 24
-```
-
----
-
-## MongoDB Setup (MongoDB Atlas Free Tier)
-
-Since Render doesn't offer managed MongoDB on free tier:
-
-1. **Create MongoDB Atlas Account** → https://cloud.mongodb.com
-2. **Create Free M0 Cluster** (512 MB, shared RAM)
-3. **Database Access** → Add user with password auth
-4. **Network Access** → Add `0.0.0.0/0` (Allow from anywhere) or Render's IP ranges
-5. **Get Connection String** → Drivers → C# / .NET Standard 2.1+
-6. **Replace `<password>`** in connection string
-
-Connection string format:
-```
-mongodb+srv://foodtech-user:yourpassword@cluster0.abc123.mongodb.net/foodtech?retryWrites=true&w=majority
-```
-
----
-
-## Health Check Endpoint
-
-The .NET backend includes a health check at `/health`:
-
-```csharp
-// Program.cs
-app.MapHealthChecks("/health");
-```
-
-**Render Health Check Config:**
-- **Path**: `/health`
-- **Interval**: 30 seconds
-- **Timeout**: 10 seconds
-- **Threshold**: 3 failures before restart
 
 ---
 
 ## Deploy Steps
 
-### Option 1: Render Dashboard (Recommended)
+### Option 1: Blueprint (Recommended - uses render.yaml)
 
-1. Go to https://dashboard.render.com
-2. **New** → **Web Service** → **Build and deploy from a Git repository**
-3. Connect GitHub → Select `foodtech` repo
-4. **Configure:**
-   - Name: `foodtech-api`
-   - Runtime: `Docker`
-   - Dockerfile Path: `FoodTech.Api/Dockerfile`
-   - Docker Build Context: `FoodTech.Api`
-5. **Environment Variables** → Add all required variables above
-6. **Create Web Service** → Deploy starts automatically
+1. Render Dashboard → **Blueprints** → **New Blueprint Instance**
+2. Connect `gauravt2306/foodtech` repo
+3. Render provisions service + secret file placeholders
+4. **Environment** → Add 3 secret variables above
+5. **Environment** → **Secret Files** → Add `client.pem` and `ca.pem`
+6. **Deploy**
 
-### Option 2: Render CLI (Infrastructure as Code)
+### Option 2: Web Service (Manual)
 
-```bash
-# Install CLI
-npm install -g @render/cli
-
-# Login
-render login
-
-# Deploy using render.yaml
-render deploy --repo https://github.com/yourusername/foodtech
-```
-
-### Option 3: Blueprint (render.yaml)
-
-1. Go to **Blueprints** in Render Dashboard
-2. **New Blueprint Instance** → Connect repo
-3. Render reads `render.yaml` and provisions everything
+1. **New** → **Web Service** → Connect repo
+2. Runtime: **Docker**
+3. Dockerfile: `FoodTech.Api/Dockerfile`
+4. Context: `FoodTech.Api`
+5. Add all environment variables above
+6. **Secret Files** → Add `client.pem` and `ca.pem`
+7. **Create Web Service**
 
 ---
 
-## Custom Domain Setup
+## Local Development with Certificates
 
-1. **Settings** → **Custom Domains** → **Add Domain**
-2. Enter: `api.foodtech.yourdomain.com`
-3. **DNS Configuration** (at your DNS provider):
-
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| CNAME | api | foodtech-api.onrender.com | 300 |
-
-4. Render auto-provisions **Let's Encrypt SSL** (auto-renews)
-
----
-
-## Free Tier Limits
-
-| Limit | Value |
-|-------|-------|
-| **Hours/month** | 750 (enough for 24/7) |
-| **Spin-down** | After 15 min inactivity |
-| **Cold start** | ~10-30 seconds |
-| **RAM** | 512 MB |
-| **CPU** | Shared |
-| **Bandwidth** | 100 GB/month |
-
-**Tip:** Ping the `/health` endpoint every 10 min to prevent spin-down:
 ```bash
-# Add to cron or use UptimeRobot
-curl https://api.foodtech.yourdomain.com/health
+# 1. Place certificates in local folder
+mkdir -p certs
+cp client.pem certs/
+cp ca.pem certs/
+
+# 2. Run with local cert paths
+export ConnectionStrings__MongoDB="mongodb+srv://cluster0.abc123.mongodb.net/foodtech?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority"
+export MongoDb__ClientCertificatePath="./certs/client.pem"
+export MongoDb__ClientCertificatePassword=""
+
+dotnet run --project FoodTech.Api/src/FoodTech.Api
 ```
 
 ---
 
-## Production Upgrade Path
+## Health Check & Verification
 
-| Plan | RAM | CPU | Price/Month | Spin-down |
-|------|-----|-----|-------------|-----------|
-| Free | 512 MB | Shared | $0 | Yes |
-| Starter | 512 MB | 0.5 vCPU | $7 | No |
-| Standard | 1 GB | 1 vCPU | $25 | No |
-| Pro | 2 GB | 2 vCPU | $85 | No |
+```bash
+# Health endpoint
+curl https://foodtech-api.onrender.com/health
 
----
+# Expected response:
+# {"status":"healthy","version":"1.0.0","timestamp":"...","databaseConnected":true}
 
-## Monitoring & Logs
-
-### Render Dashboard
-- **Logs** tab → Live logs, filter by level
-- **Metrics** → CPU, Memory, Latency (p50/p95/p99), Request rate, Error rate
-- **Alerts** → Set up email/Slack alerts for CPU > 80%, Memory > 85%, Error rate > 5%
-
-### Application Logs (Serilog)
-Structured JSON logs output to stdout (captured by Render):
-```json
-{
-  "Timestamp": "2026-11-15T00:00:00.000Z",
-  "Level": "Information",
-  "Message": "HTTP GET /api/v1/employee/vendors",
-  "Properties": { "DurationMs": 45, "UserId": "..." }
-}
+# If databaseConnected: false → Check certificate, connection string, Atlas network access
 ```
 
 ---
@@ -210,52 +249,68 @@ Structured JSON logs output to stdout (captured by Render):
 
 | Issue | Solution |
 |-------|----------|
-| **Build fails** | Check Dockerfile paths, ensure `FoodTech.Api` context is correct |
-| **Health check fails** | Verify `/health` endpoint returns 200, check port 8080 |
-| **MongoDB connection error** | Check Atlas Network Access (0.0.0.0/0), verify connection string |
-| **JWT error** | Ensure `JwtSettings__Secret` is ≥ 32 chars, base64 encoded |
-| **CORS error** | Add `FRONTEND_URL` env var, configure CORS in `Program.cs` |
-| **Port binding error** | Use `ASPNETCORE_URLS=http://+:8080`, don't hardcode port |
+| `databaseConnected: false` | Verify Atlas X.509 enabled, cert CN matches DB user, Network Access `0.0.0.0/0` |
+| `Authentication failed` | Check client.pem has both cert + private key, CA cert is correct |
+| `Certificate not found` | Verify Secret Files mounted at `/etc/secrets/client.pem` |
+| `Connection timeout` | Atlas Network Access must allow `0.0.0.0/0` or Render IPs |
+| `Invalid certificate` | Ensure PEM format, no extra whitespace, cert not expired |
 
 ---
 
-## Rollback
+## Generate Certificates Script
 
-1. **Dashboard** → **Deploys** → Click previous successful deploy → **Rollback**
-2. **Git** → `git revert HEAD && git push origin main`
+```bash
+#!/bin/bash
+# gen-certs.sh - Run locally to generate X.509 certs for MongoDB Atlas
+
+openssl req -newkey rsa:2048 -nodes -keyout client.key -out client.csr -subj "/CN=foodtech-client"
+openssl x509 -req -in client.csr -signkey client.key -out client.crt -days 365
+cat client.crt client.key > client.pem
+
+# Download ca.pem from MongoDB Atlas:
+# https://www.mongodb.com/docs/atlas/security-x509/#download-the-ca-certificate
+
+echo "client.pem created. Upload to Render Secret Files."
+echo "Download ca.pem from Atlas and upload as second secret file."
+```
 
 ---
 
-## Cost Optimization
+## Free Tier Limits
 
-1. **Free tier** → 750 hrs/mo (24/7 for 1 service)
-2. **Prevent cold starts** → External ping every 10 min (UptimeRobot free)
-3. **Upgrade when needed** → Starter ($7/mo) removes spin-down
+| Limit | Value |
+|-------|-------|
+| **Hours/month** | 750 (24/7 for 1 service) |
+| **Spin-down** | After 15 min inactivity |
+| **Cold start** | ~10-30 seconds |
+| **RAM** | 512 MB |
+| **CPU** | Shared |
 
 ---
 
 ## Security Checklist
 
+- [ ] X.509 enabled in MongoDB Atlas
+- [ ] Certificate CN matches Atlas database user
+- [ ] Private key included in client.pem
+- [ ] CA certificate from Atlas (not self-signed)
+- [ ] Network Access: `0.0.0.0/0` (or Render IP ranges)
 - [ ] Strong JWT secret (64+ chars)
-- [ ] MongoDB Atlas: Password auth + IP allowlist (or 0.0.0.0/0 for Render)
+- [ ] QR secret key (32+ chars)
 - [ ] HTTPS enforced (Render default)
-- [ ] CORS restricted to frontend domain
-- [ ] Rate limiting enabled (in `Program.cs`)
-- [ ] Security headers (Helmet equivalent in ASP.NET Core)
+- [ ] Secret Files used for certificates (not env vars)
 
 ---
 
 ## Reference Links
 
+- [MongoDB Atlas X.509 Authentication](https://www.mongodb.com/docs/atlas/security-x509/)
+- [Render Secret Files](https://render.com/docs/secret-files)
 - [Render Docker Deploy](https://render.com/docs/deploy-docker-image)
-- [Render Environment Variables](https://render.com/docs/configure-environment-variables)
-- [Render Custom Domains](https://render.com/docs/custom-domains)
-- [MongoDB Atlas Free Tier](https://www.mongodb.com/cloud/atlas/register)
-- [ASP.NET Core on Render](https://render.com/docs/deploy-aspnet-core)
-- [ASP.NET Core Health Checks](https://learn.microsoft.com/aspnet/core/host-and-deploy/health-checks)
+- [.NET X509Certificate2.CreateFromPem](https://learn.microsoft.com/dotnet/api/system.security.cryptography.x509certificates.x509certificate2.createfrompem)
 
 ---
 
-*Document Version: 2.0*  
+*Document Version: 3.0*  
 *Last Updated: 2026-11-15*  
-*For FoodTech .NET 10 Backend API Deployment on Render*
+*For FoodTech .NET 10 Backend API Deployment on Render with X.509 Auth*

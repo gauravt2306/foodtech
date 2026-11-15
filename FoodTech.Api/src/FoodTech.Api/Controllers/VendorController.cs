@@ -16,10 +16,12 @@ namespace FoodTech.Api.Controllers;
 public class VendorController : ControllerBase
 {
     private readonly IVendorProfileRepository _vendorProfileRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IMenuItemRepository _menuItemRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly IQRService _qrService;
     private readonly UpdateVendorProfileRequestValidator _updateProfileValidator;
+    private readonly CreateVendorProfileRequestValidator _createProfileValidator;
     private readonly CreateMenuItemRequestValidator _createMenuItemValidator;
     private readonly UpdateMenuItemRequestValidator _updateMenuItemValidator;
     private readonly UpdateOrderStatusRequestValidator _updateStatusValidator;
@@ -27,20 +29,24 @@ public class VendorController : ControllerBase
 
     public VendorController(
         IVendorProfileRepository vendorProfileRepository,
+        IUserRepository userRepository,
         IMenuItemRepository menuItemRepository,
         IOrderRepository orderRepository,
         IQRService qrService,
         UpdateVendorProfileRequestValidator updateProfileValidator,
+        CreateVendorProfileRequestValidator createProfileValidator,
         CreateMenuItemRequestValidator createMenuItemValidator,
         UpdateMenuItemRequestValidator updateMenuItemValidator,
         UpdateOrderStatusRequestValidator updateStatusValidator,
         HandoffOrderRequestValidator handoffValidator)
     {
         _vendorProfileRepository = vendorProfileRepository;
+        _userRepository = userRepository;
         _menuItemRepository = menuItemRepository;
         _orderRepository = orderRepository;
         _qrService = qrService;
         _updateProfileValidator = updateProfileValidator;
+        _createProfileValidator = createProfileValidator;
         _createMenuItemValidator = createMenuItemValidator;
         _updateMenuItemValidator = updateMenuItemValidator;
         _updateStatusValidator = updateStatusValidator;
@@ -66,6 +72,58 @@ public class VendorController : ControllerBase
 
         var dto = vendorProfile.Adapt<VendorProfileDto>();
         return Ok(ApiResponse<VendorProfileDto>.Ok(dto, Request.Path));
+    }
+
+    [HttpPost("profile")]
+    public async Task<IActionResult> CreateProfile([FromBody] CreateVendorProfileRequest request)
+    {
+        var validationResult = await _createProfileValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+            return BadRequest(ApiResponse<object>.Error("VALIDATION_ERROR", "Validation failed", Request.Path, errors));
+        }
+
+        var userId = GetVendorId();
+        var existingProfile = await _vendorProfileRepository.GetByUserIdAsync(userId);
+
+        if (existingProfile != null)
+        {
+            return BadRequest(ApiResponse<object>.Error("CONFLICT", "Vendor profile already exists", Request.Path));
+        }
+
+        var exists = await _vendorProfileRepository.ExistsByGstNumberAsync(request.GstNumber);
+        if (exists)
+        {
+            return BadRequest(ApiResponse<object>.Error("CONFLICT", "GST number already exists", Request.Path));
+        }
+
+        var vendorProfile = new VendorProfile
+        {
+            UserId = userId,
+            BusinessName = request.BusinessName,
+            GstNumber = request.GstNumber,
+            Address = request.Address.Adapt<Address>(),
+            OperatingHours = request.OperatingHours.Adapt<OperatingHours>(),
+            IsApproved = false,
+            Rating = 0,
+            TotalOrders = 0
+        };
+
+        var created = await _vendorProfileRepository.CreateAsync(vendorProfile);
+
+        // Update user with vendor profile ID
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user != null)
+        {
+            user.VendorProfileId = created.Id;
+            await _userRepository.UpdateAsync(user);
+        }
+
+        var dto = created.Adapt<VendorProfileDto>();
+        return Created($"/api/v1/vendor/profile", ApiResponse<VendorProfileDto>.Ok(dto, Request.Path));
     }
 
     [HttpPatch("profile")]
@@ -246,6 +304,48 @@ public class VendorController : ControllerBase
         }
 
         return Ok(ApiResponse<object>.Ok(new { message = "Menu item deleted" }, Request.Path));
+    }
+
+    [HttpGet("menu/{id}")]
+    public async Task<IActionResult> GetMenuItem(string id)
+    {
+        var userId = GetVendorId();
+        var vendorProfile = await _vendorProfileRepository.GetByUserIdAsync(userId);
+
+        if (vendorProfile == null)
+        {
+            return NotFound(ApiResponse<object>.Error("NOT_FOUND", "Vendor profile not found", Request.Path));
+        }
+
+        var menuItem = await _menuItemRepository.GetByIdAsync(id);
+        if (menuItem == null || menuItem.VendorId != vendorProfile.Id)
+        {
+            return NotFound(ApiResponse<object>.Error("NOT_FOUND", "Menu item not found", Request.Path));
+        }
+
+        var dto = menuItem.Adapt<MenuItemDto>();
+        return Ok(ApiResponse<MenuItemDto>.Ok(dto, Request.Path));
+    }
+
+    [HttpGet("orders/{id}")]
+    public async Task<IActionResult> GetOrder(string id)
+    {
+        var userId = GetVendorId();
+        var vendorProfile = await _vendorProfileRepository.GetByUserIdAsync(userId);
+
+        if (vendorProfile == null)
+        {
+            return NotFound(ApiResponse<object>.Error("NOT_FOUND", "Vendor profile not found", Request.Path));
+        }
+
+        var order = await _orderRepository.GetByIdAsync(id);
+        if (order == null || order.VendorId != vendorProfile.Id)
+        {
+            return NotFound(ApiResponse<object>.Error("NOT_FOUND", "Order not found", Request.Path));
+        }
+
+        var dto = order.Adapt<OrderDto>();
+        return Ok(ApiResponse<OrderDto>.Ok(dto, Request.Path));
     }
 
     [HttpGet("orders")]

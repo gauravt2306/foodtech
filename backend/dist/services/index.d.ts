@@ -1,3 +1,0 @@
-export { QRService, createQRService, QRCodeData, QRCodeOptions } from './qr.service';
-export { AnalyticsService, analyticsService, ChartDataPoint, DashboardStats, VendorPerformance, RevenueBreakdown } from './analytics.service';
-//# sourceMappingURL=index.d.ts.map

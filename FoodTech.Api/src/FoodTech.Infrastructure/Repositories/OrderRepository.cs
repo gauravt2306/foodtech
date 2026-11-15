@@ -1,5 +1,4 @@
-using MongoDB.Driver;
-using MongoDB.Bson;
+using Microsoft.EntityFrameworkCore;
 using FoodTech.Domain.Entities;
 using FoodTech.Domain.Enums;
 using FoodTech.Domain.Repositories;
@@ -9,53 +8,57 @@ namespace FoodTech.Infrastructure.Repositories;
 
 public class OrderRepository : IOrderRepository
 {
-    private readonly IMongoCollection<Order> _orders;
+    private readonly AppDbContext _context;
 
-    public OrderRepository(MongoDbContext context)
+    public OrderRepository(AppDbContext context)
     {
-        _orders = context.Orders;
+        _context = context;
     }
 
     public async Task<Order?> GetByIdAsync(string id, CancellationToken ct = default)
     {
-        return await _orders.Find(o => o.Id == id).FirstOrDefaultAsync(ct);
+        return await _context.Orders.FirstOrDefaultAsync(o => o.Id == id, ct);
     }
 
     public async Task<Order?> GetByOrderNumberAsync(string orderNumber, CancellationToken ct = default)
     {
-        return await _orders.Find(o => o.OrderNumber == orderNumber).FirstOrDefaultAsync(ct);
+        return await _context.Orders.FirstOrDefaultAsync(o => o.OrderNumber == orderNumber, ct);
     }
 
     public async Task<Order?> GetByPaymentIdAsync(string paymentId, CancellationToken ct = default)
     {
-        return await _orders.Find(o => o.PaymentId == paymentId).FirstOrDefaultAsync(ct);
+        return await _context.Orders.FirstOrDefaultAsync(o => o.PaymentId == paymentId, ct);
     }
 
     public async Task<IEnumerable<Order>> GetByEmployeeIdAsync(string employeeId, CancellationToken ct = default)
     {
-        return await _orders.Find(o => o.EmployeeId == employeeId)
-            .SortByDescending(o => o.CreatedAt)
+        return await _context.Orders
+            .Where(o => o.EmployeeId == employeeId)
+            .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(ct);
     }
 
     public async Task<IEnumerable<Order>> GetByVendorIdAsync(string vendorId, CancellationToken ct = default)
     {
-        return await _orders.Find(o => o.VendorId == vendorId)
-            .SortByDescending(o => o.CreatedAt)
+        return await _context.Orders
+            .Where(o => o.VendorId == vendorId)
+            .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(ct);
     }
 
     public async Task<IEnumerable<Order>> GetByVendorIdAndStatusAsync(string vendorId, OrderStatus status, CancellationToken ct = default)
     {
-        return await _orders.Find(o => o.VendorId == vendorId && o.Status == status)
-            .SortByDescending(o => o.CreatedAt)
+        return await _context.Orders
+            .Where(o => o.VendorId == vendorId && o.Status == status)
+            .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(ct);
     }
 
     public async Task<IEnumerable<Order>> GetByStatusAsync(OrderStatus status, CancellationToken ct = default)
     {
-        return await _orders.Find(o => o.Status == status)
-            .SortByDescending(o => o.CreatedAt)
+        return await _context.Orders
+            .Where(o => o.Status == status)
+            .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(ct);
     }
 
@@ -70,54 +73,50 @@ public class OrderRepository : IOrderRepository
             order.OrderNumber = GenerateOrderNumber();
         }
 
-        await _orders.InsertOneAsync(order, cancellationToken: ct);
+        _context.Orders.Add(order);
+        await _context.SaveChangesAsync(ct);
         return order;
     }
 
     public async Task<Order?> UpdateAsync(Order order, CancellationToken ct = default)
     {
         order.UpdatedAt = DateTime.UtcNow;
-        var result = await _orders.ReplaceOneAsync(o => o.Id == order.Id, order, cancellationToken: ct);
-        return result.ModifiedCount > 0 ? order : null;
+        _context.Orders.Update(order);
+        var result = await _context.SaveChangesAsync(ct);
+        return result > 0 ? order : null;
     }
 
     public async Task<bool> DeleteAsync(string id, CancellationToken ct = default)
     {
-        var result = await _orders.DeleteOneAsync(o => o.Id == id, cancellationToken: ct);
-        return result.DeletedCount > 0;
+        var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == id, ct);
+        if (order == null) return false;
+        _context.Orders.Remove(order);
+        var result = await _context.SaveChangesAsync(ct);
+        return result > 0;
     }
 
     public async Task<bool> ExistsByOrderNumberAsync(string orderNumber, CancellationToken ct = default)
     {
-        var filter = Builders<Order>.Filter.Eq(o => o.OrderNumber, orderNumber);
-        var count = await _orders.CountDocumentsAsync(filter, cancellationToken: ct);
-        return count > 0;
+        return await _context.Orders.AnyAsync(o => o.OrderNumber == orderNumber, ct);
     }
 
     public async Task<long> CountByVendorIdAsync(string vendorId, CancellationToken ct = default)
     {
-        var filter = Builders<Order>.Filter.Eq(o => o.VendorId, vendorId);
-        return await _orders.CountDocumentsAsync(filter, cancellationToken: ct);
+        return await _context.Orders.LongCountAsync(o => o.VendorId == vendorId, ct);
     }
 
     public async Task<long> CountByVendorIdAndStatusAsync(string vendorId, OrderStatus status, CancellationToken ct = default)
     {
-        var filter = Builders<Order>.Filter.Eq(o => o.VendorId, vendorId) & Builders<Order>.Filter.Eq(o => o.Status, status);
-        return await _orders.CountDocumentsAsync(filter, cancellationToken: ct);
+        return await _context.Orders.LongCountAsync(o => o.VendorId == vendorId && o.Status == status, ct);
     }
 
     public async Task<decimal> GetTotalRevenueByVendorIdAsync(string vendorId, CancellationToken ct = default)
     {
-        var pipeline = new[]
-        {
-            new BsonDocument("$match",
-                new BsonDocument("vendorId", vendorId).Add("paymentStatus", "paid")),
-            new BsonDocument("$group",
-                new BsonDocument("_id", BsonNull.Value).Add("total", new BsonDocument("$sum", "$total")))
-        };
+        var total = await _context.Orders
+            .Where(o => o.VendorId == vendorId && o.PaymentStatus == PaymentStatus.Paid)
+            .SumAsync(o => (decimal?)o.Total, ct);
 
-        var result = await _orders.Aggregate<BsonDocument>(pipeline).FirstOrDefaultAsync(ct);
-        return result?["total"]?.ToDecimal() ?? 0m;
+        return total ?? 0m;
     }
 
     private static string GenerateOrderNumber()

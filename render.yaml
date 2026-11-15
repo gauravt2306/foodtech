@@ -12,7 +12,9 @@ services:
         value: Production
       - key: ASPNETCORE_URLS
         value: http://+:8080
-      - key: ConnectionStrings__MongoDB
+      - key: ConnectionStrings__PostgreSql
+        sync: false
+      - key: PostgreSql__ConnectionString
         sync: false
       - key: JwtSettings__Secret
         sync: false

@@ -1,5 +1,6 @@
 using Serilog;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FoodTech.Infrastructure;
@@ -80,10 +81,12 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add Health Checks
-builder.Services.AddHealthChecks();
+// Add Health Checks with PostgreSQL
+builder.Services.AddHealthChecks()
+    .AddNpgSql(builder.Configuration.GetConnectionString("PostgreSql") ??
+        builder.Configuration["PostgreSql:ConnectionString"] ??
+        throw new InvalidOperationException("PostgreSQL connection string not configured"));
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -92,11 +95,10 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Initialize MongoDB indexes
+// Initialize Database (run migrations)
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<FoodTech.Infrastructure.Data.MongoDbContext>();
-    await context.CreateIndexesAsync();
+    await scope.ServiceProvider.GetRequiredService<IServiceCollection>().InitializeDatabaseAsync();
 }
 
 // Configure the HTTP request pipeline

@@ -104,60 +104,36 @@ public class AuthService : IAuthService
         string refreshToken,
         CancellationToken ct = default)
     {
-        // In a real implementation, you'd look up the user by refresh token hash
-        // For now, we'll decode the access token to get user info
-        // This is a simplified version - in production, store refresh tokens separately
+        // Find user by refresh token hash
+        // In a real implementation, you'd have a separate refresh token table
+        // For now, we check all users (not efficient but works for demo)
+        var users = await _userRepository.GetAllAsync(ct);
 
-        var handler = new JwtSecurityTokenHandler();
-        var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
-
-        try
+        User? user = null;
+        foreach (var u in users)
         {
-            var principal = handler.ValidateToken(refreshToken, new TokenValidationParameters
+            var parts = u.PasswordHash.Split('|');
+            if (parts.Length >= 2 && !string.IsNullOrEmpty(parts[1]) && VerifyPassword(refreshToken, parts[1]))
             {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuer = true,
-                ValidIssuer = _jwtSettings.Issuer,
-                ValidateAudience = true,
-                ValidAudience = _jwtSettings.Audience,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
-            }, out _);
-
-            var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
-            {
-                throw new UnauthorizedAccessException("Invalid refresh token");
+                user = u;
+                break;
             }
-
-            var user = await _userRepository.GetByIdAsync(userId, ct);
-            if (user == null || !user.IsActive)
-            {
-                throw new UnauthorizedAccessException("User not found or inactive");
-            }
-
-            // Verify refresh token hash
-            var storedRefreshHash = user.PasswordHash.Split('|').ElementAtOrDefault(1);
-            if (string.IsNullOrEmpty(storedRefreshHash) || !VerifyPassword(refreshToken, storedRefreshHash))
-            {
-                throw new UnauthorizedAccessException("Invalid refresh token");
-            }
-
-            var newAccessToken = GenerateAccessToken(user);
-            var newRefreshToken = GenerateRefreshToken();
-
-            // Update refresh token hash
-            var passwordHash = user.PasswordHash.Split('|')[0];
-            user.PasswordHash = $"{passwordHash}|{HashPassword(newRefreshToken)}";
-            await _userRepository.UpdateAsync(user, ct);
-
-            return (newAccessToken, newRefreshToken);
         }
-        catch
+
+        if (user == null || !user.IsActive)
         {
             throw new UnauthorizedAccessException("Invalid refresh token");
         }
+
+        var newAccessToken = GenerateAccessToken(user);
+        var newRefreshToken = GenerateRefreshToken();
+
+        // Update refresh token hash
+        var passwordHash = user.PasswordHash.Split('|')[0];
+        user.PasswordHash = $"{passwordHash}|{HashPassword(newRefreshToken)}";
+        await _userRepository.UpdateAsync(user, ct);
+
+        return (newAccessToken, newRefreshToken);
     }
 
     public async Task<User?> GetCurrentUserAsync(string userId, CancellationToken ct = default)
@@ -172,6 +148,26 @@ public class AuthService : IAuthService
 
         var passwordHash = user.PasswordHash.Split('|')[0];
         user.PasswordHash = $"{passwordHash}|"; // Clear refresh token
+        await _userRepository.UpdateAsync(user, ct);
+        return true;
+    }
+
+    public async Task<bool> ChangePasswordAsync(string userId, string currentPassword, string newPassword, CancellationToken ct = default)
+    {
+        var user = await _userRepository.GetByIdAsync(userId, ct);
+        if (user == null || !user.IsActive)
+        {
+            return false;
+        }
+
+        var passwordHash = user.PasswordHash.Split('|')[0];
+        if (!VerifyPassword(currentPassword, passwordHash))
+        {
+            return false;
+        }
+
+        var newPasswordHash = HashPassword(newPassword);
+        user.PasswordHash = $"{newPasswordHash}|{user.PasswordHash.Split('|').ElementAtOrDefault(1) ?? string.Empty}";
         await _userRepository.UpdateAsync(user, ct);
         return true;
     }
