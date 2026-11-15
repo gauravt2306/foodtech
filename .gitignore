@@ -1,0 +1,44 @@
+# .NET
+**/bin/
+**/obj/
+*.dll
+*.pdb
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker
+.docker/
+
+# Secrets
+*.pem
+*.key
+*.crt
+.env
+.env.local
+.env.production
+
+# Build artifacts
+dist/
+build/
+*.nupkg
+
+# Test results
+TestResults/
+*.trx
+*.xml
+
+# NuGet
+packages/
+*.nupkg

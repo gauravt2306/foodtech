@@ -1,6 +1,6 @@
-# FoodTech Backend - Render Deployment Guide
+# FoodTech Backend (.NET 10) - Render Deployment Guide
 
-This guide provides detailed steps for deploying the FoodTech backend API to Render.
+This guide provides steps for deploying the FoodTech .NET 10 backend API to Render using Docker.
 
 ---
 
@@ -12,156 +12,93 @@ git add .
 git commit -m "Prepare for Render deployment"
 git push origin main
 
-# 2. Create Render Web Service (via dashboard or CLI)
+# 2. Connect repository to Render (Dashboard or CLI)
 # 3. Configure environment variables
-# 4. Add X.509 certificates as secret files
-# 5. Deploy!
+# 4. Deploy!
 ```
 
 ---
 
 ## Render Service Configuration
 
-### Service Settings
+### Service Settings (via `render.yaml`)
 
 | Setting | Value |
 |---------|-------|
 | **Name** | `foodtech-api` |
-| **Runtime** | `Node` |
-| **Region** | `Oregon (US West)` or closest to MongoDB |
+| **Runtime** | `docker` |
+| **Region** | `Oregon (US West)` |
 | **Branch** | `main` |
-| **Root Directory** | `backend` |
-| **Build Command** | `npm ci && npm run build` |
-| **Start Command** | `npm start` |
+| **Dockerfile** | `FoodTech.Api/Dockerfile` |
+| **Docker Context** | `FoodTech.Api` |
+| **Health Check Path** | `/health` |
 | **Auto-Deploy** | `Yes` |
-
-### Instance Type
-
-| Environment | Plan | Specs |
-|-------------|------|-------|
-| **Development** | Free | 512 MB RAM, shared CPU |
-| **Staging** | Starter | 512 MB RAM, 0.5 CPU |
-| **Production** | Standard | 1 GB RAM, 1 CPU |
+| **Plan** | `Free` (512 MB RAM, shared CPU) |
 
 ---
 
 ## Environment Variables
 
-### Required Variables
+### Required Variables (set in Render Dashboard → Environment)
 
 ```env
-# Server Configuration
-NODE_ENV=production
-PORT=4000
-API_PREFIX=/api/v1
+# ASP.NET Core
+ASPNETCORE_ENVIRONMENT=Production
+ASPNETCORE_URLS=http://+:8080
 
-# MongoDB Atlas (X.509 Authentication)
-MONGODB_URI=mongodb+srv://foodapp.enjrbrq.mongodb.net/?authSource=%24external&authMechanism=MONGODB-X509
-MONGODB_DB=foodtech
-MONGODB_TLS_CERT_FILE=/etc/secrets/client.pem
-MONGODB_TLS_CA_FILE=/etc/secrets/ca.pem
+# MongoDB (use MongoDB Atlas Free M0 cluster)
+ConnectionStrings__MongoDB=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/foodtech?retryWrites=true&w=majority
 
-# JWT Authentication
-JWT_SECRET=<64-char-hex-string>
-JWT_EXPIRES_IN=7d
-JWT_REFRESH_SECRET=<64-char-hex-string>
-JWT_REFRESH_EXPIRES_IN=30d
+# JWT Authentication (generate secure secrets)
+JwtSettings__Secret=<64-char-base64-string-min-32-chars>
+JwtSettings__Issuer=foodtech-api
+JwtSettings__Audience=foodtech-app
+JwtSettings__AccessTokenExpiryMinutes=60
 
-# CORS - Production frontend URL
-FRONTEND_URL=https://your-app.expo.dev
+# QR Code Signing
+QR__SecretKey=<32-char-secret-key>
 ```
 
-### Optional Variables
+### Generate Secrets
 
-```env
-# File Uploads (Phase 5+)
-UPLOAD_DIR=/tmp/uploads
-MAX_FILE_SIZE=5242880
+```bash
+# JWT Secret (64 chars base64)
+openssl rand -base64 48
 
-# Logging
-LOG_LEVEL=info
-
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
+# QR Secret Key (32 chars)
+openssl rand -base64 24
 ```
 
 ---
 
-## Secret Files (X.509 Certificates)
+## MongoDB Setup (MongoDB Atlas Free Tier)
 
-### Adding Certificates
+Since Render doesn't offer managed MongoDB on free tier:
 
-1. Go to **Environment** → **Secret Files**
-2. Click **Add Secret File**
-3. Add two files:
+1. **Create MongoDB Atlas Account** → https://cloud.mongodb.com
+2. **Create Free M0 Cluster** (512 MB, shared RAM)
+3. **Database Access** → Add user with password auth
+4. **Network Access** → Add `0.0.0.0/0` (Allow from anywhere) or Render's IP ranges
+5. **Get Connection String** → Drivers → C# / .NET Standard 2.1+
+6. **Replace `<password>`** in connection string
 
-**File 1: Client Certificate**
-- **Key**: `client.pem`
-- **Value**: Full content of your MongoDB Atlas client certificate (`.pem`)
-- **Mount Path**: `/etc/secrets/client.pem`
-
-**File 2: CA Certificate**
-- **Key**: `ca.pem`
-- **Value**: Full content of your MongoDB Atlas CA certificate (`.pem`)
-- **Mount Path**: `/etc/secrets/ca.pem`
-
-### Certificate Format
-
-Certificates must be in PEM format:
-
+Connection string format:
 ```
------BEGIN CERTIFICATE-----
-MIIF...
-...
------END CERTIFICATE-----
-```
-
-### Verifying Certificates
-
-```bash
-# In Render shell (after deploy)
-cat /etc/secrets/client.pem
-cat /etc/secrets/ca.pem
-
-# Test connection
-node -e "
-const { MongoClient } = require('mongodb');
-const fs = require('fs');
-const client = new MongoClient(process.env.MONGODB_URI, {
-  tlsCertificateKeyFile: '/etc/secrets/client.pem',
-  tlsCAFile: '/etc/secrets/ca.pem',
-});
-client.connect().then(() => console.log('Connected!')).catch(console.error);
-"
+mongodb+srv://foodtech-user:yourpassword@cluster0.abc123.mongodb.net/foodtech?retryWrites=true&w=majority
 ```
 
 ---
 
 ## Health Check Endpoint
 
-Ensure your backend has a health check at `/health`:
+The .NET backend includes a health check at `/health`:
 
-```typescript
-// backend/src/routes/health.routes.ts
-import { Router } from 'express';
-
-const router = Router();
-
-router.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV,
-  });
-});
-
-export default router;
+```csharp
+// Program.cs
+app.MapHealthChecks("/health");
 ```
 
-### Render Health Check Config
-
+**Render Health Check Config:**
 - **Path**: `/health`
 - **Interval**: 30 seconds
 - **Timeout**: 10 seconds
@@ -169,353 +106,22 @@ export default router;
 
 ---
 
-## Custom Domain Setup
-
-### 1. Add Domain in Render
-
-1. Go to **Settings** → **Custom Domains**
-2. Click **Add Domain**
-3. Enter: `api.foodtech.yourdomain.com`
-
-### 2. Configure DNS
-
-Add CNAME record in your DNS provider:
-
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| CNAME | api | foodtech-api.onrender.com | 300 |
-
-### 3. SSL Certificate
-
-- Render automatically provisions **Let's Encrypt** SSL
-- Certificate renews automatically
-- Force HTTPS: Enabled by default
-
----
-
-## Scaling Configuration
-
-### Horizontal Scaling (Manual)
-
-1. Go to **Settings** → **Scaling**
-2. Set **Min Instances**: 1
-3. Set **Max Instances**: 3 (adjust based on load)
-
-### Vertical Scaling
-
-Upgrade plan in **Settings** → **Plan**:
-
-| Plan | RAM | CPU | Price/Month |
-|------|-----|-----|-------------|
-| Free | 512 MB | Shared | $0 |
-| Starter | 512 MB | 0.5 | $7 |
-| Standard | 1 GB | 1 | $25 |
-| Pro | 2 GB | 2 | $85 |
-
----
-
-## Environment-Specific Deployments
-
-### Staging Environment
-
-Create a separate Render service:
-
-```yaml
-# render.yaml (Infrastructure as Code)
-services:
-  - type: web
-    name: foodtech-api-staging
-    runtime: node
-    region: oregon
-    plan: starter
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: staging
-      - key: MONGODB_DB
-        value: foodtech-staging
-      - key: FRONTEND_URL
-        value: https://staging-app.expo.dev
-    secretFiles:
-      - client.pem
-      - ca.pem
-```
-
-### Production Environment
-
-```yaml
-# render.yaml (Production)
-services:
-  - type: web
-    name: foodtech-api
-    runtime: node
-    region: oregon
-    plan: standard
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: MONGODB_DB
-        value: foodtech
-      - key: FRONTEND_URL
-        value: https://foodtech.expo.dev
-    secretFiles:
-      - client.pem
-      - ca.pem
-    scaling:
-      minInstances: 2
-      maxInstances: 5
-```
-
----
-
-## Monitoring & Alerts
-
-### Built-in Metrics
-
-Render provides:
-- **CPU Usage**
-- **Memory Usage**
-- **Request Latency (p50, p95, p99)**
-- **Request Rate**
-- **Error Rate**
-- **Deploy History**
-
-### Setting Up Alerts
-
-1. Go to **Metrics** → **Alerts**
-2. Create alerts for:
-   - **CPU > 80%** for 5 minutes
-   - **Memory > 85%** for 5 minutes
-   - **Error Rate > 5%** for 2 minutes
-   - **p95 Latency > 2000ms** for 5 minutes
-
-### External Monitoring
-
-Recommended integrations:
-- **UptimeRobot** - External uptime monitoring
-- **Datadog** / **New Relic** - APM
-- **Sentry** - Error tracking
-
----
-
-## Logs & Debugging
-
-### Viewing Logs
-
-1. Go to **Logs** tab in Render Dashboard
-2. Filter by:
-   - **Time range**
-   - **Log level** (stdout/stderr)
-   - **Search terms**
-
-### Structured Logging
-
-Add to your backend:
-
-```typescript
-// backend/src/utils/logger.ts
-import pino from 'pino';
-
-export const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  transport: process.env.NODE_ENV !== 'production' 
-    ? { target: 'pino-pretty' } 
-    : undefined,
-});
-```
-
-### Common Log Patterns
-
-```bash
-# Filter errors
-render logs --service foodtech-api --grep "ERROR"
-
-# Filter by request ID
-render logs --service foodtech-api --grep "req-id:abc123"
-
-# Follow live logs
-render logs --service foodtech-api --tail
-```
-
----
-
-## Deployment Scripts
-
-### package.json Scripts
-
-```json
-{
-  "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "lint": "eslint src --ext .ts",
-    "test": "jest",
-    "db:migrate": "tsx src/scripts/migrate.ts",
-    "db:seed": "tsx src/scripts/seed.ts"
-  }
-}
-```
-
-### Pre-deploy Checklist
-
-```bash
-# 1. Type check
-npm run build
-
-# 2. Lint
-npm run lint
-
-# 3. Test
-npm run test
-
-# 4. Verify health endpoint locally
-curl http://localhost:4000/health
-
-# 5. Check bundle size
-du -sh dist/
-```
-
----
-
-## Troubleshooting
-
-### Build Failures
-
-| Error | Solution |
-|-------|----------|
-| `tsc: command not found` | Add `typescript` to dependencies |
-| `Module not found` | Check `tsconfig.json` paths, ensure all imports resolve |
-| `Out of memory` | Upgrade to Standard plan or optimize build |
-
-### Runtime Errors
-
-| Error | Solution |
-|-------|----------|
-| `MongoServerSelectionError` | Check Network Access, verify certificates |
-| `JWT_SECRET not defined` | Add to Environment Variables |
-| `CORS error` | Verify FRONTEND_URL matches exactly |
-| `Port already in use` | Use `PORT` env var, don't hardcode |
-
-### Certificate Issues
-
-| Error | Solution |
-|-------|----------|
-| `unable to verify the first certificate` | Ensure CA cert is correct and complete |
-| `certificate has expired` | Regenerate certificates in MongoDB Atlas |
-| `permission denied` | Check secret file mount path `/etc/secrets/` |
-
----
-
-## Rollback Procedure
-
-### Via Dashboard
-
-1. Go to **Deploys** tab
-2. Find previous successful deploy
-3. Click **Rollback** → **Confirm**
-
-### Via CLI
-
-```bash
-# Install Render CLI
-npm install -g @render/cli
-
-# Login
-render login
-
-# List deploys
-render deploys list --service foodtech-api
-
-# Rollback to specific deploy
-render deploys rollback --service foodtech-api --deploy-id <deploy-id>
-```
-
-### Via Git
-
-```bash
-# Revert last commit
-git revert HEAD
-git push origin main
-
-# Or revert to specific commit
-git revert <commit-hash>..HEAD
-git push origin main
-```
-
----
-
-## Cost Optimization
-
-### Free Tier Limits
-
-- **750 hours/month** (enough for 1 service 24/7)
-- **Spins down** after 15 min inactivity
-- **Cold start** ~10-30 seconds
-
-### Production Optimization
-
-1. **Use Standard plan** - No spin-down, dedicated resources
-2. **Enable caching** - Add Redis for session/cache
-3. **Optimize queries** - Use MongoDB indexes, projection
-4. **Connection pooling** - Configure Mongoose pool size
-
-```typescript
-// Optimal MongoDB connection options
-mongoose.connect(uri, {
-  maxPoolSize: 10,
-  minPoolSize: 2,
-  socketTimeoutMS: 45000,
-  serverSelectionTimeoutMS: 10000,
-});
-```
-
----
-
-## Security Hardening
-
-### Render-Level Security
-
-- [ ] **DDoS Protection** - Enabled by default
-- [ ] **WAF** - Available on Pro+ plans
-- [ ] **IP Allowlist** - Restrict admin endpoints
-- [ ] **TLS 1.3** - Enforced automatically
-
-### Application-Level Security
-
-```typescript
-// backend/src/app.ts
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-
-app.use(helmet({
-  contentSecurityPolicy: false, // API doesn't need CSP
-  crossOriginEmbedderPolicy: false,
-}));
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per window
-  message: 'Too many requests from this IP',
-});
-app.use('/api/', limiter);
-
-// Stricter limit for auth
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10, // 10 attempts per 15 min
-});
-app.use('/api/v1/auth/login', authLimiter);
-app.use('/api/v1/auth/register', authLimiter);
-```
-
----
-
-## Useful Render CLI Commands
+## Deploy Steps
+
+### Option 1: Render Dashboard (Recommended)
+
+1. Go to https://dashboard.render.com
+2. **New** → **Web Service** → **Build and deploy from a Git repository**
+3. Connect GitHub → Select `foodtech` repo
+4. **Configure:**
+   - Name: `foodtech-api`
+   - Runtime: `Docker`
+   - Dockerfile Path: `FoodTech.Api/Dockerfile`
+   - Docker Build Context: `FoodTech.Api`
+5. **Environment Variables** → Add all required variables above
+6. **Create Web Service** → Deploy starts automatically
+
+### Option 2: Render CLI (Infrastructure as Code)
 
 ```bash
 # Install CLI
@@ -524,45 +130,132 @@ npm install -g @render/cli
 # Login
 render login
 
-# List services
-render services list
-
-# View logs
-render logs --service foodtech-api --tail
-
-# Trigger deploy
-render deploys trigger --service foodtech-api
-
-# View env vars
-render env-vars list --service foodtech-api
-
-# Set env var
-render env-vars set --service foodtech-api KEY=VALUE
-
-# View secret files
-render secret-files list --service foodtech-api
-
-# Add secret file
-render secret-files add --service foodtech-api --key client.pem --value "$(cat client.pem)"
-
-# Scale service
-render scaling update --service foodtech-api --min-instances 2 --max-instances 5
+# Deploy using render.yaml
+render deploy --repo https://github.com/yourusername/foodtech
 ```
+
+### Option 3: Blueprint (render.yaml)
+
+1. Go to **Blueprints** in Render Dashboard
+2. **New Blueprint Instance** → Connect repo
+3. Render reads `render.yaml` and provisions everything
+
+---
+
+## Custom Domain Setup
+
+1. **Settings** → **Custom Domains** → **Add Domain**
+2. Enter: `api.foodtech.yourdomain.com`
+3. **DNS Configuration** (at your DNS provider):
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| CNAME | api | foodtech-api.onrender.com | 300 |
+
+4. Render auto-provisions **Let's Encrypt SSL** (auto-renews)
+
+---
+
+## Free Tier Limits
+
+| Limit | Value |
+|-------|-------|
+| **Hours/month** | 750 (enough for 24/7) |
+| **Spin-down** | After 15 min inactivity |
+| **Cold start** | ~10-30 seconds |
+| **RAM** | 512 MB |
+| **CPU** | Shared |
+| **Bandwidth** | 100 GB/month |
+
+**Tip:** Ping the `/health` endpoint every 10 min to prevent spin-down:
+```bash
+# Add to cron or use UptimeRobot
+curl https://api.foodtech.yourdomain.com/health
+```
+
+---
+
+## Production Upgrade Path
+
+| Plan | RAM | CPU | Price/Month | Spin-down |
+|------|-----|-----|-------------|-----------|
+| Free | 512 MB | Shared | $0 | Yes |
+| Starter | 512 MB | 0.5 vCPU | $7 | No |
+| Standard | 1 GB | 1 vCPU | $25 | No |
+| Pro | 2 GB | 2 vCPU | $85 | No |
+
+---
+
+## Monitoring & Logs
+
+### Render Dashboard
+- **Logs** tab → Live logs, filter by level
+- **Metrics** → CPU, Memory, Latency (p50/p95/p99), Request rate, Error rate
+- **Alerts** → Set up email/Slack alerts for CPU > 80%, Memory > 85%, Error rate > 5%
+
+### Application Logs (Serilog)
+Structured JSON logs output to stdout (captured by Render):
+```json
+{
+  "Timestamp": "2026-11-15T00:00:00.000Z",
+  "Level": "Information",
+  "Message": "HTTP GET /api/v1/employee/vendors",
+  "Properties": { "DurationMs": 45, "UserId": "..." }
+}
+```
+
+---
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| **Build fails** | Check Dockerfile paths, ensure `FoodTech.Api` context is correct |
+| **Health check fails** | Verify `/health` endpoint returns 200, check port 8080 |
+| **MongoDB connection error** | Check Atlas Network Access (0.0.0.0/0), verify connection string |
+| **JWT error** | Ensure `JwtSettings__Secret` is ≥ 32 chars, base64 encoded |
+| **CORS error** | Add `FRONTEND_URL` env var, configure CORS in `Program.cs` |
+| **Port binding error** | Use `ASPNETCORE_URLS=http://+:8080`, don't hardcode port |
+
+---
+
+## Rollback
+
+1. **Dashboard** → **Deploys** → Click previous successful deploy → **Rollback**
+2. **Git** → `git revert HEAD && git push origin main`
+
+---
+
+## Cost Optimization
+
+1. **Free tier** → 750 hrs/mo (24/7 for 1 service)
+2. **Prevent cold starts** → External ping every 10 min (UptimeRobot free)
+3. **Upgrade when needed** → Starter ($7/mo) removes spin-down
+
+---
+
+## Security Checklist
+
+- [ ] Strong JWT secret (64+ chars)
+- [ ] MongoDB Atlas: Password auth + IP allowlist (or 0.0.0.0/0 for Render)
+- [ ] HTTPS enforced (Render default)
+- [ ] CORS restricted to frontend domain
+- [ ] Rate limiting enabled (in `Program.cs`)
+- [ ] Security headers (Helmet equivalent in ASP.NET Core)
 
 ---
 
 ## Reference Links
 
-- [Render Documentation](https://render.com/docs)
-- [Render Node.js Guide](https://render.com/docs/deploy-node-express-app)
+- [Render Docker Deploy](https://render.com/docs/deploy-docker-image)
 - [Render Environment Variables](https://render.com/docs/configure-environment-variables)
-- [Render Secret Files](https://render.com/docs/secret-files)
 - [Render Custom Domains](https://render.com/docs/custom-domains)
-- [MongoDB Atlas X.509](https://www.mongodb.com/docs/atlas/security-x509/)
-- [Render CLI](https://github.com/render/cli)
+- [MongoDB Atlas Free Tier](https://www.mongodb.com/cloud/atlas/register)
+- [ASP.NET Core on Render](https://render.com/docs/deploy-aspnet-core)
+- [ASP.NET Core Health Checks](https://learn.microsoft.com/aspnet/core/host-and-deploy/health-checks)
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: 2026-11-14*
-*For FoodTech Backend API Deployment on Render*
+*Document Version: 2.0*  
+*Last Updated: 2026-11-15*  
+*For FoodTech .NET 10 Backend API Deployment on Render*

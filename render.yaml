@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: foodtech-api
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./FoodTech.Api/Dockerfile
+    dockerContext: ./FoodTech.Api
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:8080
+      - key: ConnectionStrings__MongoDB
+        sync: false
+      - key: JwtSettings__Secret
+        sync: false
+      - key: JwtSettings__Issuer
+        value: foodtech-api
+      - key: JwtSettings__Audience
+        value: foodtech-app
+      - key: JwtSettings__AccessTokenExpiryMinutes
+        value: "60"
+      - key: QR__SecretKey
+        sync: false
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+
+databases:
+  - name: foodtech-mongodb
+    plan: free
+    databaseName: foodtech
+    # MongoDB not available on Render free tier - use MongoDB Atlas instead
