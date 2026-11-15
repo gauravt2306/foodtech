@@ -75,6 +75,9 @@ public class OrderRepository : IOrderRepository
 
         _context.Orders.Add(order);
         await _context.SaveChangesAsync(ct);
+
+        // Reload to get database-generated ID (for ValueGeneratedOnAdd)
+        await _context.Entry(order).ReloadAsync(ct);
         return order;
     }
 

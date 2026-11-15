@@ -54,6 +54,9 @@ public class MenuItemRepository : IMenuItemRepository
         menuItem.UpdatedAt = DateTime.UtcNow;
         _context.MenuItems.Add(menuItem);
         await _context.SaveChangesAsync(ct);
+
+        // Reload to get database-generated ID (for ValueGeneratedOnAdd)
+        await _context.Entry(menuItem).ReloadAsync(ct);
         return menuItem;
     }
 

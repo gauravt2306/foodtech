@@ -46,6 +46,9 @@ public class UserRepository : IUserRepository
         user.UpdatedAt = DateTime.UtcNow;
         _context.Users.Add(user);
         await _context.SaveChangesAsync(ct);
+
+        // Reload to get database-generated ID (for ValueGeneratedOnAdd)
+        await _context.Entry(user).ReloadAsync(ct);
         return user;
     }
 

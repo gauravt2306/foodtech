@@ -56,6 +56,9 @@ public class VendorProfileRepository : IVendorProfileRepository
         vendorProfile.UpdatedAt = DateTime.UtcNow;
         _context.VendorProfiles.Add(vendorProfile);
         await _context.SaveChangesAsync(ct);
+
+        // Reload to get database-generated ID (for ValueGeneratedOnAdd)
+        await _context.Entry(vendorProfile).ReloadAsync(ct);
         return vendorProfile;
     }
 
