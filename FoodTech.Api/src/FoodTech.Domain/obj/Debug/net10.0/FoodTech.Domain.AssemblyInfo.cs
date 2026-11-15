@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FoodTech.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c974f24fa8ede14be86a9502aa9ada5193641606")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a7ef03ed519954b694a4238ce0f693e8d01e456f")]
 [assembly: System.Reflection.AssemblyProductAttribute("FoodTech.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FoodTech.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
