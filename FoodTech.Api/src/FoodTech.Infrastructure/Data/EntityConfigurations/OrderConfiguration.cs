@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Text.Json;
 using FoodTech.Domain.Entities;
 
 namespace FoodTech.Infrastructure.Data.EntityConfigurations;
@@ -33,9 +35,14 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(o => new { o.VendorId, o.Status });
         builder.HasIndex(o => new { o.VendorId, o.CreatedAt });
 
+        var itemsConverter = new ValueConverter<OrderItem[], string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Deserialize<OrderItem[]>(v, (JsonSerializerOptions?)null) ?? Array.Empty<OrderItem>());
+
         builder.Property(o => o.Items)
             .HasColumnType("jsonb")
-            .IsRequired();
+            .IsRequired()
+            .HasConversion(itemsConverter);
 
         builder.Property(o => o.Status)
             .IsRequired()

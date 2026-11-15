@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Text.Json;
 using FoodTech.Domain.Entities;
 
 namespace FoodTech.Infrastructure.Data.EntityConfigurations;
@@ -55,8 +57,13 @@ public class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
         builder.Property(m => m.PrepTimeMinutes)
             .IsRequired();
 
+        var tagsConverter = new ValueConverter<string[], string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Deserialize<string[]>(v, (JsonSerializerOptions?)null) ?? Array.Empty<string>());
+
         builder.Property(m => m.Tags)
             .HasColumnType("jsonb")
+            .HasConversion(tagsConverter)
             .HasDefaultValueSql("'[]'::jsonb");
 
         builder.Property(m => m.CreatedAt)
