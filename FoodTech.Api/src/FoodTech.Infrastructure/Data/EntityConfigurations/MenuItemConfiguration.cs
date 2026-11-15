@@ -13,7 +13,8 @@ public class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
         builder.HasKey(m => m.Id);
         builder.Property(m => m.Id)
             .HasColumnType("text")
-            .HasDefaultValueSql("gen_random_uuid()::text");
+            .HasDefaultValueSql("gen_random_uuid()::text")
+            .ValueGeneratedOnAdd();
 
         builder.Property(m => m.VendorId)
             .IsRequired()

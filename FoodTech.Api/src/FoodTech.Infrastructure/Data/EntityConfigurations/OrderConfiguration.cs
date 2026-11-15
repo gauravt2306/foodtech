@@ -13,7 +13,8 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasKey(o => o.Id);
         builder.Property(o => o.Id)
             .HasColumnType("text")
-            .HasDefaultValueSql("gen_random_uuid()::text");
+            .HasDefaultValueSql("gen_random_uuid()::text")
+            .ValueGeneratedOnAdd();
 
         builder.Property(o => o.OrderNumber)
             .IsRequired()

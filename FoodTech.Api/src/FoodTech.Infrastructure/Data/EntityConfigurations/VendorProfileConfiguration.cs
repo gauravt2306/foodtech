@@ -13,7 +13,8 @@ public class VendorProfileConfiguration : IEntityTypeConfiguration<VendorProfile
         builder.HasKey(v => v.Id);
         builder.Property(v => v.Id)
             .HasColumnType("text")
-            .HasDefaultValueSql("gen_random_uuid()::text");
+            .HasDefaultValueSql("gen_random_uuid()::text")
+            .ValueGeneratedOnAdd();
 
         builder.Property(v => v.UserId)
             .IsRequired()

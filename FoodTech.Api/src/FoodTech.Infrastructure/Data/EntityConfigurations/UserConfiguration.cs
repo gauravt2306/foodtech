@@ -13,7 +13,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasKey(u => u.Id);
         builder.Property(u => u.Id)
             .HasColumnType("text")
-            .HasDefaultValueSql("gen_random_uuid()::text");
+            .HasDefaultValueSql("gen_random_uuid()::text")
+            .ValueGeneratedOnAdd();
 
         builder.Property(u => u.Email)
             .IsRequired()
