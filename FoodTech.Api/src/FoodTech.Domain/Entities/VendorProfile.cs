@@ -4,9 +4,9 @@ namespace FoodTech.Domain.Entities;
 
 public class VendorProfile
 {
-    public string Id { get; set; } = string.Empty;
+    public string Id { get; set; } = default!;
 
-    public string UserId { get; set; } = string.Empty;
+    public string UserId { get; set; } = default!;
 
     public string BusinessName { get; set; } = string.Empty;
 

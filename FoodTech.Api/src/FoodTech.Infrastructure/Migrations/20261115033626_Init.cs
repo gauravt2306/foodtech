@@ -12,6 +12,9 @@ namespace FoodTech.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Enable pgcrypto extension for gen_random_uuid()
+            migrationBuilder.Sql("CREATE EXTENSION IF NOT EXISTS pgcrypto;");
+
             migrationBuilder.AlterDatabase()
                 .Annotation("Npgsql:Enum:category", "breakfast,lunch,snacks,beverages,dinner")
                 .Annotation("Npgsql:Enum:diet_type", "veg,non_veg,vegan,gluten_free")

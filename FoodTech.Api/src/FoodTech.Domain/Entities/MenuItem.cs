@@ -4,9 +4,9 @@ namespace FoodTech.Domain.Entities;
 
 public class MenuItem
 {
-    public string Id { get; set; } = string.Empty;
+    public string Id { get; set; } = default!;
 
-    public string VendorId { get; set; } = string.Empty;
+    public string VendorId { get; set; } = default!;
 
     public string Name { get; set; } = string.Empty;
 

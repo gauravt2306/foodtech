@@ -4,13 +4,13 @@ namespace FoodTech.Domain.Entities;
 
 public class Order
 {
-    public string Id { get; set; } = string.Empty;
+    public string Id { get; set; } = default!;
 
-    public string OrderNumber { get; set; } = string.Empty; // "ORD-YYYYMMDD-XXXX"
+    public string OrderNumber { get; set; } = default!; // "ORD-YYYYMMDD-XXXX"
 
-    public string EmployeeId { get; set; } = string.Empty;
+    public string EmployeeId { get; set; } = default!;
 
-    public string VendorId { get; set; } = string.Empty;
+    public string VendorId { get; set; } = default!;
 
     public OrderItem[] Items { get; set; } = Array.Empty<OrderItem>();
 
