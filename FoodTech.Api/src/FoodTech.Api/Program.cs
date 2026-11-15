@@ -35,9 +35,6 @@ builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>()
 // Add Mapster
 TypeAdapterConfig.GlobalSettings.Scan(typeof(Program).Assembly);
 
-// Initialize MongoDB indexes
-await builder.Services.InitializeMongoDbAsync();
-
 // Configure JWT Settings
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
@@ -94,6 +91,13 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// Initialize MongoDB indexes
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<FoodTech.Infrastructure.Data.MongoDbContext>();
+    await context.CreateIndexesAsync();
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
