@@ -22,7 +22,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 # Create non-root user
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser:appuser /app
+RUN useradd -m -s /bin/bash appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Copy published app
