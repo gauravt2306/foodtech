@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Text.Json;
 using FoodTech.Domain.Entities;
 
 namespace FoodTech.Infrastructure.Data.EntityConfigurations;
@@ -36,13 +38,23 @@ public class VendorProfileConfiguration : IEntityTypeConfiguration<VendorProfile
         builder.Property(v => v.Description)
             .HasMaxLength(1000);
 
+        var addressConverter = new ValueConverter<Address, string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Deserialize<Address>(v, (JsonSerializerOptions?)null) ?? new Address());
+
+        var operatingHoursConverter = new ValueConverter<OperatingHours, string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Deserialize<OperatingHours>(v, (JsonSerializerOptions?)null) ?? new OperatingHours());
+
         builder.Property(v => v.Address)
             .HasColumnType("jsonb")
-            .IsRequired();
+            .IsRequired()
+            .HasConversion(addressConverter);
 
         builder.Property(v => v.OperatingHours)
             .HasColumnType("jsonb")
-            .IsRequired();
+            .IsRequired()
+            .HasConversion(operatingHoursConverter);
 
         builder.Property(v => v.ImageUrl)
             .HasMaxLength(500);
