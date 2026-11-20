@@ -129,6 +129,9 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
+// Listen on all interfaces for emulator access
+app.Urls.Add("http://0.0.0.0:5083");
+
 app.Run();
 
 public partial class Program { } // For testing

@@ -94,6 +94,34 @@ public class SuperAdminController : ControllerBase
         return Ok(ApiResponse<SuperAdminVendorDto>.Ok(dto, Request.Path));
     }
 
+    [HttpGet("vendors/pending")]
+    public async Task<IActionResult> GetPendingVendors()
+    {
+        var vendors = await _vendorProfileRepository.GetPendingApprovalAsync();
+        var dtos = new List<SuperAdminVendorDto>();
+
+        foreach (var vendor in vendors)
+        {
+            var user = await _userRepository.GetByIdAsync(vendor.UserId);
+            dtos.Add(new SuperAdminVendorDto(
+                vendor.Id,
+                vendor.UserId,
+                user?.Email ?? "",
+                user?.Name ?? "",
+                vendor.BusinessName,
+                vendor.GstNumber,
+                vendor.IsApproved,
+                vendor.ApprovedBy,
+                vendor.ApprovedAt,
+                vendor.Rating,
+                vendor.TotalOrders,
+                vendor.CreatedAt
+            ));
+        }
+
+        return Ok(ApiResponse<List<SuperAdminVendorDto>>.Ok(dtos, Request.Path));
+    }
+
     [HttpPatch("vendors/{id}/approve")]
     public async Task<IActionResult> ApproveVendor(string id, [FromBody] ApproveVendorRequest request)
     {
