@@ -183,7 +183,29 @@ public class EmployeeController : ControllerBase
     {
         var employeeId = GetEmployeeId();
         var orders = await _orderRepository.GetByEmployeeIdAsync(employeeId);
-        var dtos = orders.Select(o => o.Adapt<EmployeeOrderDto>()).ToArray();
+
+        // Fetch vendor names for all orders
+        var vendorIds = orders.Select(o => o.VendorId).Distinct().ToArray();
+        var vendors = new Dictionary<string, string>();
+        foreach (var vendorId in vendorIds)
+        {
+            var vendor = await _vendorProfileRepository.GetByIdAsync(vendorId);
+            if (vendor != null)
+            {
+                vendors[vendorId] = vendor.BusinessName;
+            }
+        }
+
+        var dtos = orders.Select(o =>
+        {
+            var dto = o.Adapt<EmployeeOrderDto>();
+            if (vendors.TryGetValue(o.VendorId, out var vendorName))
+            {
+                dto = dto with { VendorName = vendorName };
+            }
+            return dto;
+        }).ToArray();
+
         return Ok(ApiResponse<EmployeeOrderDto[]>.Ok(dtos, Request.Path));
     }
 
@@ -224,6 +246,14 @@ public class EmployeeController : ControllerBase
         }
 
         var dto = order.Adapt<EmployeeOrderDto>();
+
+        // Fetch vendor name
+        var vendor = await _vendorProfileRepository.GetByIdAsync(order.VendorId);
+        if (vendor != null)
+        {
+            dto = dto with { VendorName = vendor.BusinessName };
+        }
+
         return Ok(ApiResponse<EmployeeOrderDto>.Ok(dto, Request.Path));
     }
 
@@ -263,6 +293,14 @@ public class EmployeeController : ControllerBase
         }
 
         var dto = updated.Adapt<EmployeeOrderDto>();
+
+        // Fetch vendor name
+        var vendor = await _vendorProfileRepository.GetByIdAsync(updated.VendorId);
+        if (vendor != null)
+        {
+            dto = dto with { VendorName = vendor.BusinessName };
+        }
+
         return Ok(ApiResponse<EmployeeOrderDto>.Ok(dto, Request.Path));
     }
 
@@ -320,7 +358,7 @@ public class EmployeeController : ControllerBase
         return Ok(ApiResponse<UpiPaymentInitiateResponse>.Ok(response, Request.Path));
     }
 
-    [HttpPost("upi/callback")]
+    [HttpPost("~/api/v1/upi/callback")]
     [AllowAnonymous] // UPI gateway calls this endpoint
     public async Task<IActionResult> UpiCallback([FromBody] UpiPaymentCallbackRequest request)
     {
