@@ -1,0 +1,36 @@
+# Fly.io configuration for FoodTech API
+app = "foodtech-api"
+primary_region = "sea"  # Seattle - closest to Oregon PostgreSQL
+
+[build]
+  dockerfile = "FoodTech.Api/Dockerfile"
+
+[env]
+  ASPNETCORE_ENVIRONMENT = "Production"
+  ASPNETCORE_URLS = "http://+:8080"
+  JwtSettings__Issuer = "foodtech-api"
+  JwtSettings__Audience = "foodtech-app"
+  JwtSettings__AccessTokenExpiryMinutes = "60"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[health_checks]
+  interval = "30s"
+  timeout = "10s"
+  method = "GET"
+  path = "/health"
+  grace_period = "30s"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+# PostgreSQL will be attached via fly postgres create
+# Connection string will be set as secret after DB creation
