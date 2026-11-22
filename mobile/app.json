@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "FoodTech",
+    "slug": "foodtech",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "foodtech",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.foodtech.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#007AFF",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.foodtech.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-build-properties"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "762eae38-9889-4e18-a076-fd9cc6368980"
+      },
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      }
+    },
+    "cli": {
+      "appVersionSource": "remote"
+    },
+    "owner": "gauravt943"
+  }
+}
