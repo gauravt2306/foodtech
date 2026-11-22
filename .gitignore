@@ -42,3 +42,18 @@ TestResults/
 # NuGet
 packages/
 *.nupkg
+
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/*.apk
+mobile/*.aab
+
+# Android
+*.apk
+*.aab
+
+# Gradle
+.gradle/

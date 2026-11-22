@@ -42,16 +42,13 @@ static string ConvertPostgresUrl(string uri)
         // Manual parsing to handle postgresql:// scheme which UriBuilder doesn't recognize
         // Format: postgresql://user:password@host:port/database?sslmode=require
 
-        string scheme;
         string rest;
         if (uri.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
         {
-            scheme = "postgresql";
             rest = uri.Substring("postgresql://".Length);
         }
         else if (uri.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
         {
-            scheme = "postgres";
             rest = uri.Substring("postgres://".Length);
         }
         else
@@ -180,7 +177,11 @@ TypeAdapterConfig.GlobalSettings.Scan(typeof(Program).Assembly);
 // Configure JWT Settings
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 
-// Configure JWT Authentication - defer TokenValidationParameters configuration until after build
+// Get JWT settings from configuration for token validation
+var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
+    ?? throw new InvalidOperationException("JwtSettings not configured");
+
+// Configure JWT Authentication with proper validation parameters
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -190,6 +191,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
             ClockSkew = TimeSpan.Zero,
             RoleClaimType = System.Security.Claims.ClaimTypes.Role,
             NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier
@@ -274,26 +278,6 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await context.Database.MigrateAsync();
-}
-
-// Configure JWT Bearer options with validated settings from DI container
-using (var scope = app.Services.CreateScope())
-{
-    var jwtSettings = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<JwtSettings>>().Value;
-    var jwtBearerOptions = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
-    jwtBearerOptions.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings.Issuer,
-        ValidAudience = jwtSettings.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
-        ClockSkew = TimeSpan.Zero,
-        RoleClaimType = System.Security.Claims.ClaimTypes.Role,
-        NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier
-    };
 }
 
 // Configure the HTTP request pipeline - Swagger available in all environments
