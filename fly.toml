@@ -1,6 +1,6 @@
 # Fly.io configuration for FoodTech API
 app = "foodtech-api"
-primary_region = "sea"  # Seattle - closest to Oregon PostgreSQL
+primary_region = "lax"  # Los Angeles - closest to Oregon PostgreSQL
 
 [build]
   dockerfile = "FoodTech.Api/Dockerfile"

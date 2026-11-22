@@ -9,6 +9,10 @@ DB_NAME="foodtech-db"
 
 echo "🚀 Deploying FoodTech API to Fly.io"
 
+# Add flyctl to PATH
+export FLYCTL_INSTALL="$HOME/.fly"
+export PATH="$FLYCTL_INSTALL/bin:$PATH"
+
 # 1. Check flyctl is installed
 if ! command -v flyctl &> /dev/null; then
     echo "Installing flyctl..."
@@ -30,7 +34,7 @@ fi
 # 4. Create PostgreSQL database
 if ! flyctl postgres list | grep -q "$DB_NAME"; then
     echo "🐘 Creating PostgreSQL: $DB_NAME"
-    flyctl postgres create --name "$DB_NAME" --region sea --vm-size shared-cpu-1x --volume-size 3
+    flyctl postgres create --name "$DB_NAME" --region lax --vm-size shared-cpu-1x --volume-size 3
 
     echo "⏳ Waiting for database to be ready..."
     sleep 30
