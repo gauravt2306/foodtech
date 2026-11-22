@@ -20,10 +20,56 @@ using Mapster;
 var builder = WebApplication.CreateBuilder(args);
 
 // Map Fly.io DATABASE_URL to PostgreSql:ConnectionString for Infrastructure
+// Fly.io provides postgres:// URI format, but Npgsql expects key=value format
 var databaseUrl = builder.Configuration["DATABASE_URL"];
 if (!string.IsNullOrEmpty(databaseUrl))
 {
-    builder.Configuration["PostgreSql:ConnectionString"] = databaseUrl;
+    builder.Configuration["PostgreSql:ConnectionString"] = ConvertFlyPostgresUrl(databaseUrl);
+}
+
+// Convert Fly.io postgres:// URI to Npgsql connection string
+static string ConvertFlyPostgresUrl(string uri)
+{
+    try
+    {
+        var uriBuilder = new UriBuilder(uri);
+
+        // Parse query string manually (HttpUtility not available in .NET Core)
+        var query = uriBuilder.Query.TrimStart('?');
+        var queryParams = new Dictionary<string, string>();
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = pair.Split('=', 2);
+            if (kv.Length == 2)
+                queryParams[Uri.UnescapeDataString(kv[0])] = Uri.UnescapeDataString(kv[1]);
+        }
+
+        var builder = new System.Data.Common.DbConnectionStringBuilder();
+        builder["Host"] = uriBuilder.Host;
+        builder["Port"] = uriBuilder.Port.ToString();
+        builder["Database"] = uriBuilder.Path.TrimStart('/');
+        builder["Username"] = uriBuilder.UserName;
+        builder["Password"] = uriBuilder.Password;
+
+        // Handle sslmode from query string
+        if (queryParams.TryGetValue("sslmode", out var sslMode))
+        {
+            builder["Ssl Mode"] = sslMode;
+        }
+        else
+        {
+            builder["Ssl Mode"] = "Require"; // Default for Fly.io
+        }
+
+        builder["Trust Server Certificate"] = "true";
+
+        return builder.ConnectionString;
+    }
+    catch
+    {
+        // Fallback: return original if parsing fails
+        return uri;
+    }
 }
 
 // Configure Serilog
