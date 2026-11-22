@@ -1,8 +1,14 @@
 using Serilog;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Swashbuckle.AspNetCore.Swagger;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Text;
+using System.Reflection;
+using System.IO;
 using FoodTech.Infrastructure;
 using FoodTech.Infrastructure.Auth;
 using FoodTech.Infrastructure.Data;
@@ -87,7 +93,41 @@ builder.Services.AddHealthChecks()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() { Title = "FoodTech API", Version = "v1", Description = "FoodTech Backend API" });
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "FoodTech API",
+        Version = "v1",
+        Description = "FoodTech Backend API",
+        Contact = new OpenApiContact { Name = "FoodTech Team", Email = "support@foodtech.com" }
+    });
+
+    // Include XML comments
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
+
+    // Add JWT Bearer security scheme
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+    });
+
+    // Add global security requirement using scheme reference
+    c.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+    {
+        { new OpenApiSecuritySchemeReference("Bearer"), new List<string>() }
+    });
+
+    // Add operation filter to apply security requirements based on [Authorize] / [AllowAnonymous]
+    c.OperationFilter<SecurityRequirementsOperationFilter>();
 });
 
 var app = builder.Build();
@@ -119,16 +159,16 @@ using (var scope = app.Services.CreateScope())
     };
 }
 
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+// Configure the HTTP request pipeline - Swagger available in all environments
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "FoodTech API v1");
-        c.RoutePrefix = "swagger";
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "FoodTech API v1");
+    c.RoutePrefix = "swagger";
+    c.OAuthClientId("swagger-ui");
+    c.OAuthAppName("FoodTech API Swagger UI");
+    c.OAuthUsePkce();
+});
 
 // Custom middleware pipeline
 app.UseRequestId();
@@ -150,3 +190,39 @@ app.Urls.Add("http://0.0.0.0:5083");
 app.Run();
 
 public partial class Program { } // For testing
+
+// Operation filter to apply security requirements based on [Authorize] / [AllowAnonymous] attributes
+internal sealed class SecurityRequirementsOperationFilter : IOperationFilter
+{
+    public void Apply(OpenApiOperation operation, OperationFilterContext context)
+    {
+        // Check for [AllowAnonymous] on action or controller
+        var hasAllowAnonymous = context.MethodInfo.GetCustomAttributes(true)
+            .Union(context.MethodInfo.DeclaringType?.GetCustomAttributes(true) ?? Array.Empty<object>())
+            .Any(a => a is AllowAnonymousAttribute);
+
+        if (hasAllowAnonymous)
+        {
+            // Remove security requirement for anonymous endpoints
+            operation.Security?.Clear();
+            return;
+        }
+
+        // Check for [Authorize] on action or controller
+        var hasAuthorize = context.MethodInfo.GetCustomAttributes(true)
+            .Union(context.MethodInfo.DeclaringType?.GetCustomAttributes(true) ?? Array.Empty<object>())
+            .Any(a => a is AuthorizeAttribute);
+
+        if (hasAuthorize)
+        {
+            // Add Bearer security requirement - reference the scheme defined in AddSecurityDefinition
+            operation.Security = new List<OpenApiSecurityRequirement>
+            {
+                new OpenApiSecurityRequirement
+                {
+                    { new OpenApiSecuritySchemeReference("Bearer"), new List<string>() }
+                }
+            };
+        }
+    }
+}

@@ -10,9 +10,15 @@ using Mapster;
 
 namespace FoodTech.Api.Controllers;
 
+/// <summary>
+/// Employee-facing endpoints for browsing vendors, menus, and managing orders.
+/// </summary>
 [ApiController]
 [Route("api/v1/employee")]
 [Authorize(Roles = "employee")]
+[Produces("application/json")]
+[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
 public class EmployeeController : ControllerBase
 {
     private readonly IVendorProfileRepository _vendorProfileRepository;
@@ -50,7 +56,17 @@ public class EmployeeController : ControllerBase
             ?? throw new UnauthorizedAccessException("Invalid token");
     }
 
+    /// <summary>
+    /// Gets all approved vendors with their basic information and menu item counts.
+    /// </summary>
+    /// <returns>List of approved vendors.</returns>
+    /// <response code="200">Returns the list of vendors.</response>
+    /// <response code="401">Unauthorized - invalid or missing JWT token.</response>
+    /// <response code="403">Forbidden - user is not an employee.</response>
     [HttpGet("vendors")]
+    [ProducesResponseType(typeof(ApiResponse<List<VendorListItemDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetVendors()
     {
         var vendors = await _vendorProfileRepository.GetApprovedAsync();
@@ -77,7 +93,20 @@ public class EmployeeController : ControllerBase
         return Ok(ApiResponse<List<VendorListItemDto>>.Ok(dtos, Request.Path));
     }
 
+    /// <summary>
+    /// Gets the menu for a specific approved vendor.
+    /// </summary>
+    /// <param name="id">The vendor ID.</param>
+    /// <returns>The vendor's available menu items.</returns>
+    /// <response code="200">Returns the vendor menu.</response>
+    /// <response code="401">Unauthorized - invalid or missing JWT token.</response>
+    /// <response code="403">Forbidden - user is not an employee.</response>
+    /// <response code="404">Vendor not found or not approved.</response>
     [HttpGet("vendors/{id}/menu")]
+    [ProducesResponseType(typeof(ApiResponse<EmployeeVendorMenuDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetVendorMenu(string id)
     {
         var vendor = await _vendorProfileRepository.GetByIdAsync(id);
@@ -93,7 +122,22 @@ public class EmployeeController : ControllerBase
         return Ok(ApiResponse<EmployeeVendorMenuDto>.Ok(response, Request.Path));
     }
 
+    /// <summary>
+    /// Creates a new order for the authenticated employee.
+    /// </summary>
+    /// <param name="request">The order creation request containing vendor ID, items, payment method, etc.</param>
+    /// <returns>The created order with QR code for pickup.</returns>
+    /// <response code="201">Order created successfully.</response>
+    /// <response code="400">Validation error or invalid menu items.</response>
+    /// <response code="401">Unauthorized - invalid or missing JWT token.</response>
+    /// <response code="403">Forbidden - user is not an employee.</response>
+    /// <response code="404">Vendor not found or not approved.</response>
     [HttpPost("orders")]
+    [ProducesResponseType(typeof(ApiResponse<CreateOrderResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
     {
         var validationResult = await _createOrderValidator.ValidateAsync(request);
@@ -178,7 +222,17 @@ public class EmployeeController : ControllerBase
         return Created($"/api/v1/employee/orders/{created.Id}", ApiResponse<CreateOrderResponse>.Ok(response, Request.Path));
     }
 
+    /// <summary>
+    /// Gets all orders for the authenticated employee.
+    /// </summary>
+    /// <returns>List of employee's orders with vendor names.</returns>
+    /// <response code="200">Returns the list of orders.</response>
+    /// <response code="401">Unauthorized - invalid or missing JWT token.</response>
+    /// <response code="403">Forbidden - user is not an employee.</response>
     [HttpGet("orders")]
+    [ProducesResponseType(typeof(ApiResponse<EmployeeOrderDto[]>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetOrders()
     {
         var employeeId = GetEmployeeId();
@@ -209,7 +263,20 @@ public class EmployeeController : ControllerBase
         return Ok(ApiResponse<EmployeeOrderDto[]>.Ok(dtos, Request.Path));
     }
 
+    /// <summary>
+    /// Gets detailed information for a specific approved vendor.
+    /// </summary>
+    /// <param name="id">The vendor ID.</param>
+    /// <returns>The vendor details including menu item count.</returns>
+    /// <response code="200">Returns the vendor details.</response>
+    /// <response code="401">Unauthorized - invalid or missing JWT token.</response>
+    /// <response code="403">Forbidden - user is not an employee.</response>
+    /// <response code="404">Vendor not found or not approved.</response>
     [HttpGet("vendors/{id}")]
+    [ProducesResponseType(typeof(ApiResponse<VendorListItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetVendor(string id)
     {
         var vendor = await _vendorProfileRepository.GetByIdAsync(id);
@@ -234,7 +301,20 @@ public class EmployeeController : ControllerBase
         return Ok(ApiResponse<VendorListItemDto>.Ok(dto, Request.Path));
     }
 
+    /// <summary>
+    /// Gets detailed information for a specific order belonging to the authenticated employee.
+    /// </summary>
+    /// <param name="id">The order ID.</param>
+    /// <returns>The order details with vendor name.</returns>
+    /// <response code="200">Returns the order details.</response>
+    /// <response code="401">Unauthorized - invalid or missing JWT token.</response>
+    /// <response code="403">Forbidden - user is not an employee.</response>
+    /// <response code="404">Order not found or does not belong to the employee.</response>
     [HttpGet("orders/{id}")]
+    [ProducesResponseType(typeof(ApiResponse<EmployeeOrderDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetOrder(string id)
     {
         var employeeId = GetEmployeeId();
@@ -257,7 +337,23 @@ public class EmployeeController : ControllerBase
         return Ok(ApiResponse<EmployeeOrderDto>.Ok(dto, Request.Path));
     }
 
+    /// <summary>
+    /// Marks an order as paid (for cash/card payments).
+    /// </summary>
+    /// <param name="id">The order ID.</param>
+    /// <param name="request">The payment request containing payment ID.</param>
+    /// <returns>The updated order.</returns>
+    /// <response code="200">Order marked as paid successfully.</response>
+    /// <response code="400">Order already paid or validation error.</response>
+    /// <response code="401">Unauthorized - invalid or missing JWT token.</response>
+    /// <response code="403">Forbidden - user is not an employee.</response>
+    /// <response code="404">Order not found or does not belong to the employee.</response>
     [HttpPost("orders/{id}/pay")]
+    [ProducesResponseType(typeof(ApiResponse<EmployeeOrderDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> PayOrder(string id, [FromBody] PayOrderRequest request)
     {
         var validationResult = await _payOrderValidator.ValidateAsync(request);
@@ -304,7 +400,23 @@ public class EmployeeController : ControllerBase
         return Ok(ApiResponse<EmployeeOrderDto>.Ok(dto, Request.Path));
     }
 
+    /// <summary>
+    /// Initiates a UPI payment for an order, returning a UPI deep link.
+    /// </summary>
+    /// <param name="id">The order ID.</param>
+    /// <param name="request">The UPI payment initiation request containing the UPI VPA.</param>
+    /// <returns>UPI deep link for payment initiation.</returns>
+    /// <response code="200">UPI deep link generated successfully.</response>
+    /// <response code="400">Order already paid, not a UPI order, or validation error.</response>
+    /// <response code="401">Unauthorized - invalid or missing JWT token.</response>
+    /// <response code="403">Forbidden - user is not an employee.</response>
+    /// <response code="404">Order not found or does not belong to the employee.</response>
     [HttpPost("orders/{id}/upi/initiate")]
+    [ProducesResponseType(typeof(ApiResponse<UpiPaymentInitiateResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> InitiateUpiPayment(string id, [FromBody] UpiPaymentInitiateRequest request)
     {
         var validationResult = await _upiInitiateValidator.ValidateAsync(request);
@@ -358,8 +470,19 @@ public class EmployeeController : ControllerBase
         return Ok(ApiResponse<UpiPaymentInitiateResponse>.Ok(response, Request.Path));
     }
 
+    /// <summary>
+    /// Handles UPI payment gateway callbacks (webhook).
+    /// </summary>
+    /// <param name="request">The UPI payment callback request from the gateway.</param>
+    /// <returns>Payment processing result.</returns>
+    /// <response code="200">Callback processed successfully.</response>
+    /// <response code="400">Validation error.</response>
+    /// <response code="404">Order not found for the transaction reference.</response>
     [HttpPost("~/api/v1/upi/callback")]
     [AllowAnonymous] // UPI gateway calls this endpoint
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpiCallback([FromBody] UpiPaymentCallbackRequest request)
     {
         var validationResult = await _upiCallbackValidator.ValidateAsync(request);
@@ -413,7 +536,20 @@ public class EmployeeController : ControllerBase
         return Ok(ApiResponse<object>.Ok(response, Request.Path));
     }
 
+    /// <summary>
+    /// Gets a fresh QR code for an order for vendor pickup verification.
+    /// </summary>
+    /// <param name="id">The order ID.</param>
+    /// <returns>QR code token for the order.</returns>
+    /// <response code="200">QR code generated successfully.</response>
+    /// <response code="401">Unauthorized - invalid or missing JWT token.</response>
+    /// <response code="403">Forbidden - user is not an employee.</response>
+    /// <response code="404">Order not found or does not belong to the employee.</response>
     [HttpGet("orders/{id}/qr")]
+    [ProducesResponseType(typeof(ApiResponse<QrCodeResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetQrCode(string id)
     {
         var employeeId = GetEmployeeId();
