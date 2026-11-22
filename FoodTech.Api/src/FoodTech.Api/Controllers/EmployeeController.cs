@@ -514,7 +514,11 @@ public class EmployeeController : ControllerBase
         {
             order.PaymentStatus = PaymentStatus.Paid;
             order.PaymentId = request.UpiTransactionId ?? request.TransactionRef;
-            order.Status = OrderStatus.Confirmed;
+            // Only confirm order if it's still pending; vendor may have already started processing
+            if (order.Status == OrderStatus.Pending)
+            {
+                order.Status = OrderStatus.Confirmed;
+            }
         }
         else
         {
@@ -522,7 +526,15 @@ public class EmployeeController : ControllerBase
             order.Status = OrderStatus.Cancelled;
         }
 
-        await _orderRepository.UpdateAsync(order);
+        try
+        {
+            await _orderRepository.UpdateAsync(order);
+        }
+        catch (Exception ex)
+        {
+            var innerMsg = ex.InnerException?.Message ?? ex.Message;
+            return BadRequest(ApiResponse<object>.Error("INTERNAL_ERROR", $"Update failed: {innerMsg}", Request.Path));
+        }
 
         var response = new
         {
