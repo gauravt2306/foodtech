@@ -19,6 +19,13 @@ using Mapster;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Map Fly.io DATABASE_URL to PostgreSql:ConnectionString for Infrastructure
+var databaseUrl = builder.Configuration["DATABASE_URL"];
+if (!string.IsNullOrEmpty(databaseUrl))
+{
+    builder.Configuration["PostgreSql:ConnectionString"] = databaseUrl;
+}
+
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -85,10 +92,14 @@ builder.Services.AddCors(options =>
 });
 
 // Add Health Checks with PostgreSQL
+// Fly.io sets DATABASE_URL, also support ConnectionStrings:PostgreSql and PostgreSql:ConnectionString
+var pgConnectionString = builder.Configuration.GetConnectionString("PostgreSql")
+    ?? builder.Configuration["PostgreSql:ConnectionString"]
+    ?? builder.Configuration["DATABASE_URL"]
+    ?? throw new InvalidOperationException("PostgreSQL connection string not configured (checked ConnectionStrings:PostgreSql, PostgreSql:ConnectionString, DATABASE_URL)");
+
 builder.Services.AddHealthChecks()
-    .AddNpgSql(builder.Configuration.GetConnectionString("PostgreSql") ??
-        builder.Configuration["PostgreSql:ConnectionString"] ??
-        throw new InvalidOperationException("PostgreSQL connection string not configured"));
+    .AddNpgSql(pgConnectionString);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
