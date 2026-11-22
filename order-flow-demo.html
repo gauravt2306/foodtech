@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoodTech E2E Order Flow Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+    header {
+      text-align: center;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, #007AFF 0%, #0056CC 100%);
+      color: white;
+      border-radius: 16px;
+      margin-bottom: 32px;
+    }
+    header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 8px; }
+    header p { font-size: 1.1rem; opacity: 0.9; }
+    .step {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid #e2e8f0;
+      opacity: 0.5;
+      transform: translateY(20px);
+      transition: all 0.4s ease;
+      position: relative;
+    }
+    .step.active {
+      opacity: 1;
+      transform: translateY(0);
+      border-color: #007AFF;
+      box-shadow: 0 4px 20px rgba(0, 122, 255, 0.15);
+    }
+    .step.completed {
+      opacity: 1;
+      transform: translateY(0);
+      border-color: #10b981;
+      background: #f0fdf4;
+    }
+    .step::before {
+      content: attr(data-step);
+      position: absolute;
+      left: -16px;
+      top: 24px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.875rem;
+      border: 3px solid white;
+      z-index: 1;
+    }
+    .step.active::before { background: #007AFF; color: white; }
+    .step.completed::before { background: #10b981; color: white; content: "✓"; }
+    .step-header { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+    .role-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .role-employee { background: #dbeafe; color: #1e40af; }
+    .role-vendor { background: #fef3c7; color: #92400e; }
+    .role-superadmin { background: #fce7f3; color: #9d174d; }
+    .role-system { background: #e0e7ff; color: #3730a3; }
+    .step-title { font-size: 1.125rem; font-weight: 700; color: #1e293b; }
+    .step-desc { color: #64748b; margin-left: 48px; line-height: 1.6; }
+    .api-call {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      margin: 12px 48px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .api-call .method { color: #10b981; }
+    .api-call .url { color: #60a5fa; }
+    .api-call .header { color: #a78bfa; }
+    .response {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.75rem;
+      margin: 8px 48px 16px;
+      overflow-x: auto;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .controls {
+      position: sticky;
+      bottom: 20px;
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(to top, white, transparent);
+    }
+    button {
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn-primary { background: #007AFF; color: white; }
+    .btn-primary:hover { background: #0056CC; transform: translateY(-1px); }
+    .btn-secondary { background: #e2e8f0; color: #475569; }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .progress-bar {
+      height: 4px;
+      background: #e2e8f0;
+      border-radius: 2px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #007AFF, #10b981);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+    .legend { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #64748b; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+    @media (max-width: 640px) {
+      .step::before { left: -12px; width: 24px; height: 24px; font-size: 0.7rem; }
+      .step-desc, .api-call, .response { margin-left: 36px; }
+      header h1 { font-size: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🍛 FoodTech E2E Order Flow</h1>
+      <p>Complete journey: Employee → Vendor → SuperAdmin across 12 stages</p>
+    </header>
+
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot" style="background:#007AFF"></span>Employee</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>Vendor</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#ec4899"></span>SuperAdmin</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#6366f1"></span>System/API</div>
+    </div>
+
+    <div id="steps">
+      <!-- Steps will be injected by JS -->
+    </div>
+
+    <div class="controls">
+      <button class="btn-secondary" id="prevBtn" onclick="prevStep()">← Previous</button>
+      <button class="btn-primary" id="nextBtn" onclick="nextStep()">Next →</button>
+      <button class="btn-secondary" id="autoBtn" onclick="toggleAuto()">▶ Auto Play</button>
+    </div>
+  </div>
+
+  <script>
+    const steps = [
+      {
+        step: 1, role: 'employee', title: 'Employee Logs In',
+        desc: 'Employee opens the app and taps "Test Login (Employee)" using seeded credentials (employee@test.com / password123). JWT tokens (access + refresh) are stored securely in AsyncStorage.',
+        api: 'POST /api/v1/auth/login\n{ "email": "employee@test.com", "password": "password123" }',
+        response: '{ "success": true, "data": { "accessToken": "eyJhbGciOiJIUzI1NiIs...", "refreshToken": "...", "user": { "id": "...", "email": "employee@test.com", "name": "Test Employee", "role": "Employee" } } }'
+      },
+      {
+        step: 2, role: 'employee', title: 'Browse Approved Vendors',
+        desc: 'Home screen loads list of 15 approved vendors from the backend. Each shows business name, rating, and menu item count. Employee selects "Test Cafeteria".',
+        api: 'GET /api/v1/employee/vendors\nAuthorization: Bearer <token>',
+        response: '{ "success": true, "data": [ { "id": "1da20c98-...", "businessName": "Test Cafeteria", "rating": 4.5, "menuItemCount": 6 }, ... ] }'
+      },
+      {
+        step: 3, role: 'employee', title: 'View Vendor Menu',
+        desc: 'Employee taps vendor to see full menu with 6 items: Masala Dosa, Idli Sambar, Vada, Filter Coffee, Lemon Rice, Curd Rice. Each shows price, diet type, prep time.',
+        api: 'GET /api/v1/employee/vendors/1da20c98-.../menu\nAuthorization: Bearer <token>',
+        response: '{ "success": true, "data": { "vendorId": "...", "businessName": "Test Cafeteria", "menuItems": [ { "id": "252dd831-...", "name": "Masala Dosa", "price": 8000, "category": "Breakfast", "dietType": "Veg" }, ... ] } }'
+      },
+      {
+        step: 4, role: 'employee', title: 'Add Items to Cart & Create Order',
+        desc: 'Employee adds 1× Masala Dosa (₹80) + 1× Idli Sambar (₹60) to cart. Subtotal ₹140, Tax ₹7, Total ₹147. Chooses UPI payment. Order created with PENDING status and QR code generated.',
+        api: 'POST /api/v1/employee/orders\nAuthorization: Bearer <token>\n{ "vendorId": "...", "items": [{ "menuItemId": "...", "quantity": 1 }], "paymentMethod": "Upi" }',
+        response: '{ "success": true, "data": { "orderId": "289d2ae5-...", "orderNumber": "ORD-20261122-1782", "subtotal": 14000, "taxAmount": 700, "total": 14700, "qrCodeData": "eyJvcmRlcklkIjoi..." } }'
+      },
+      {
+        step: 5, role: 'employee', title: 'Initiate UPI Payment',
+        desc: 'Employee taps "Pay with UPI", enters VPA (test@upi). Backend returns a UPI deep link: upi://pay?pa=test@upi&am=147.00&tn=Order+ORD-...&tr=UPI_ORD-..._1795350391. This opens the UPI app (GPay, PhonePe, etc.) on the device.',
+        api: 'POST /api/v1/employee/orders/{id}/upi/initiate\nAuthorization: Bearer <token>\n{ "orderId": "...", "upiVpa": "test@upi" }',
+        response: '{ "success": true, "data": { "upiDeepLink": "upi://pay?pa=test%40upi&pn=FoodTech+Order+ORD-...&am=147.00&cu=INR&tn=Order+ORD-...&tr=UPI_ORD-..._1795350391", "orderId": "...", "amount": 14700, "transactionRef": "UPI_ORD-..._1795350391" } }'
+      },
+      {
+        step: 6, role: 'system', title: 'UPI Gateway Callback (Webhook)',
+        desc: 'After user authorizes payment in UPI app, the gateway POSTs to /api/v1/upi/callback with TransactionRef and Status=SUCCESS. Backend finds order by PaymentId, marks PaymentStatus=Paid. Since order is still PENDING, it also sets Status=Confirmed.',
+        api: 'POST /api/v1/upi/callback (AllowAnonymous)\nContent-Type: application/json\n{ "TransactionRef": "UPI_ORD-..._1795350391", "Status": "SUCCESS", "UpiTransactionId": "upi_txn_UPI_ORD-..._1795350391" }',
+        response: '{ "success": true, "data": { "success": true, "orderId": "...", "orderNumber": "ORD-20261122-1782", "paymentStatus": "Paid", "upiTransactionId": "upi_txn_UPI_ORD-..._1795350391" } }'
+      },
+      {
+        step: 7, role: 'vendor', title: 'Vendor Logs In',
+        desc: 'Vendor opens app, taps "Test Login (Vendor)" using vendor@foodtech.com / password123. Sees their dashboard with Test Cafeteria profile.',
+        api: 'POST /api/v1/auth/login\n{ "email": "vendor@foodtech.com", "password": "password123" }',
+        response: '{ "success": true, "data": { "accessToken": "...", "user": { "id": "...", "email": "vendor@foodtech.com", "name": "Test Vendor", "role": "vendor" } } }'
+      },
+      {
+        step: 8, role: 'vendor', title: 'Vendor Kanban Board Loads Orders',
+        desc: 'Vendor sees Kanban with 6 columns: Pending, Confirmed, Preparing, Ready, Completed, Cancelled. The new order appears in "Confirmed" column (after UPI payment). Mobile client flattens the grouped API response into a flat array with status field.',
+        api: 'GET /api/v1/vendor/orders\nAuthorization: Bearer <vendor_token>',
+        response: '{ "success": true, "data": { "pending": [], "confirmed": [{ "id": "...", "orderNumber": "ORD-20261122-1782", "status": "Confirmed", "items": [...], "paymentStatus": "Paid" }], "preparing": [], "ready": [], "completed": [], "cancelled": [] } }'
+      },
+      {
+        step: 9, role: 'vendor', title: 'Vendor Updates: Confirmed → Preparing',
+        desc: 'Vendor drags order card or taps "Start Preparing". Status changes to PREPARING. Real-time update via PATCH.',
+        api: 'PATCH /api/v1/vendor/orders/{id}/status\nAuthorization: Bearer <vendor_token>\n{ "status": "Preparing" }',
+        response: '{ "success": true, "data": { "id": "...", "orderNumber": "ORD-20261122-1782", "status": "Preparing", "paymentStatus": "Paid" } }'
+      },
+      {
+        step: 10, role: 'vendor', title: 'Vendor Updates: Preparing → Ready',
+        desc: 'Food is ready for pickup. Vendor taps "Mark Ready". Status becomes READY. QR code is now scannable for handoff.',
+        api: 'PATCH /api/v1/vendor/orders/{id}/status\nAuthorization: Bearer <vendor_token>\n{ "status": "Ready" }',
+        response: '{ "success": true, "data": { "id": "...", "orderNumber": "ORD-20261122-1782", "status": "Ready", "paymentStatus": "Paid", "qrCodeData": "eyJvcmRlcklkIjoi..." } }'
+      },
+      {
+        step: 11, role: 'vendor', title: 'QR Code Handoff → COMPLETED',
+        desc: 'Employee arrives, shows QR code on their app. Vendor scans it via "Scan QR" button. Backend verifies token matches order, sets Status=COMPLETED, records handoffAt timestamp and handoffBy vendor ID.',
+        api: 'POST /api/v1/vendor/orders/{id}/handoff\nAuthorization: Bearer <vendor_token>\n{ "qrToken": "eyJvcmRlcklkIjoi..." }',
+        response: '{ "success": true, "data": { "id": "...", "orderNumber": "ORD-20261122-1782", "status": "Completed", "paymentStatus": "Paid", "handoffAt": "2026-11-22T12:26:44.123Z", "handoffBy": "094b866d-..." } }'
+      },
+      {
+        step: 12, role: 'superadmin', title: 'SuperAdmin Dashboard Updates',
+        desc: 'SuperAdmin logs in (admin@test.com / Admin@123). Dashboard now shows: Total Orders 25, Paid Orders 7, Total Revenue ₹1375.5, Total Vendors 15. Order appears in analytics.',
+        api: 'GET /api/v1/superadmin/analytics/dashboard\nAuthorization: Bearer <superadmin_token>',
+        response: '{ "success": true, "data": { "totalOrders": 25, "paidOrders": 7, "totalRevenue": 1375.5, "totalVendors": 15 } }'
+      }
+    ];
+
+    let currentStep = 0;
+    let autoPlay = false;
+    let autoTimer = null;
+
+    const stepsContainer = document.getElementById('steps');
+    const progressFill = document.getElementById('progressFill');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const autoBtn = document.getElementById('autoBtn');
+
+    function renderSteps() {
+      stepsContainer.innerHTML = steps.map((s, i) => `
+        <div class="step ${i === currentStep ? 'active' : (i < currentStep ? 'completed' : '')}" data-step="${s.step}">
+          <div class="step-header">
+            <span class="role-badge role-${s.role}">${s.role}</span>
+            <h3 class="step-title">${s.title}</h3>
+          </div>
+          <p class="step-desc">${s.desc}</p>
+          <div class="api-call"><span class="method">${s.api.split('\n')[0].split(' ')[0]}</span> <span class="url">${s.api.split('\n')[0].split(' ')[1] || ''}</span>${s.api.includes('\n') ? '\n' + s.api.split('\n').slice(1).map(l => `<span class="header">${l}</span>`).join('\n') : ''}</div>
+          <div class="response">${s.response}</div>
+        </div>
+      `).join('');
+      updateProgress();
+      updateButtons();
+    }
+
+    function updateProgress() {
+      const pct = ((currentStep + 1) / steps.length) * 100;
+      progressFill.style.width = pct + '%';
+    }
+
+    function updateButtons() {
+      prevBtn.disabled = currentStep === 0;
+      nextBtn.disabled = currentStep === steps.length - 1;
+      nextBtn.textContent = currentStep === steps.length - 1 ? 'Finish' : 'Next →';
+    }
+
+    function nextStep() {
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        renderSteps();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 0) {
+        currentStep--;
+        renderSteps();
+      }
+    }
+
+    function toggleAuto() {
+      autoPlay = !autoPlay;
+      autoBtn.textContent = autoPlay ? '⏸ Pause' : '▶ Auto Play';
+      autoBtn.classList.toggle('btn-primary', autoPlay);
+      autoBtn.classList.toggle('btn-secondary', !autoPlay);
+      if (autoPlay) {
+        autoTimer = setInterval(() => {
+          if (currentStep < steps.length - 1) nextStep();
+          else { clearInterval(autoTimer); autoPlay = false; autoBtn.textContent = '▶ Auto Play'; autoBtn.classList.remove('btn-primary'); autoBtn.classList.add('btn-secondary'); }
+        }, 3500);
+      } else {
+        clearInterval(autoTimer);
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextStep(); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); prevStep(); }
+    });
+
+    renderSteps();
+  </script>
+</body>
+</html>
