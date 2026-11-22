@@ -6,5 +6,8 @@ public enum Category
     Lunch = 1,
     Snacks = 2,
     Beverages = 3,
-    Dinner = 4
+    Dinner = 4,
+    Desserts = 5,
+    MainCourse = 6,
+    Starters = 7
 }

@@ -1,0 +1,84 @@
+{
+  "filePath": "mobile/src/app/vendor/menu.tsx",
+  "findings": {
+    "elysianTableOccurrences": [],
+    "cormorantOccurrences": [],
+    "plusJakartaOccurrences": [],
+    "goldOccurrences": [],
+    "c5a059Occurrences": [],
+    "luxuryDesignPatterns": {
+      "gradients": [],
+      "goldShadows": [],
+      "serifFonts": [],
+      "heroSections": []
+    },
+    "colorUsage": {
+      "fromColorsTs": {
+        "dark": {
+          "charcoal": "#0A0A0A",
+          "onyx": "#121212",
+          "deepCharcoal": "#1A1A1A",
+          "surface": "#1E1E1E"
+        },
+        "gold": {
+          "primary": "#C5A059",
+          "shimmer": "#E6C991",
+          "light": "#F5E6C8",
+          "dark": "#A0803F"
+        },
+        "text": {
+          "primary": "#FFFFFF",
+          "secondary": "#D1D5DB",
+          "muted": "#9CA3AF",
+          "disabled": "#6B7280",
+          "onGold": "#0A0A0A"
+        },
+        "border": {
+          "subtle": "rgba(255, 255, 255, 0.05)",
+          "default": "rgba(255, 255, 255, 0.1)",
+          "strong": "rgba(255, 255, 255, 0.15)",
+          "gold": "rgba(197, 160, 89, 0.3)"
+        },
+        "gradients": {
+          "luxury": "linear-gradient(135deg, #1A1A1A 0%, #0A0A0A 100%)",
+          "goldShimmer": "linear-gradient(90deg, #C5A059 0%, #E6C991 50%, #C5A059 100%)",
+          "card": "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)",
+          "goldOverlay": "linear-gradient(135deg, rgba(197,160,89,0.1) 0%, rgba(230,201,145,0.05) 100%)"
+        },
+        "shadows": {
+          "gold": "0 10px 30px rgba(197, 160, 89, 0.3)",
+          "goldSubtle": "0 4px 16px rgba(197, 160, 89, 0.15)",
+          "card": "0 2px 8px rgba(0, 0, 0, 0.3)",
+          "elevated": "0 8px 24px rgba(0, 0, 0, 0.4)",
+          "inner": "inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+        },
+        "typography": {
+          "serif": "CormorantGaramond_600SemiBold",
+          "serifBold": "CormorantGaramond_700Bold",
+          "sans": "PlusJakartaSans_400Regular",
+          "sansMedium": "PlusJakartaSans_500Medium",
+          "sansSemiBold": "PlusJakartaSans_600SemiBold",
+          "sansBold": "PlusJakartaSans_700Bold"
+        }
+      },
+      "inMenuTsx": {
+        "backgroundColor": "#F8FAFC (light mode, not from dark palette)",
+        "cardBackground": "#FFFFFF",
+        "borderColor": "#F3F4F6",
+        "shadowColor": "#000 (standard black, not gold)",
+        "shadowOpacity": "0.05 (subtle, not gold shadow)",
+        "fabBackground": "#FF5722 (orange, not gold)",
+        "fabShadow": "#FF5722 (orange shadow, not gold)",
+        "textPrimary": "#1E293B",
+        "textSecondary": "#6B7280",
+        "textMuted": "#9CA3AF",
+        "toggleActiveBg": "#DCFCE7 (green)",
+        "toggleActiveBorder": "#22C55E (green)",
+        "toggleActiveText": "#22C55E (green)",
+        "deleteIconColor": "#EF4444 (red)",
+        "refreshControlColor": "#FF5722 (orange)"
+      }
+    },
+    "summary": "The menu.tsx file does NOT use the Elysian Table luxury design system. It uses a light-theme design with standard colors (#F8FAFC, #FFFFFF, #1E293B) instead of the dark luxury palette (charcoal, onyx, gold). No Cormorant or PlusJakarta fonts are used. No gold accents (#C5A059), gold shadows, or luxury gradients are present. The FAB uses orange (#FF5722) instead of gold. The file appears to be a legacy/unmigrated vendor screen."
+  }
+}

@@ -1,13 +1,15 @@
 #!/bin/bash
 # Fly.io deployment script for FoodTech API
+# Uses existing Render PostgreSQL database
 # Run: chmod +x deploy-fly.sh && ./deploy-fly.sh
 
 set -e
 
 APP_NAME="foodtech-api"
-DB_NAME="foodtech-db"
+# Render PostgreSQL connection string (already exists)
+RENDER_PG="postgresql://foodtech_7rat_user:4ZRyeEcTkCABnVXw91kL3r5LwUfbEnMs@dpg-dbsjd8lg1s2s73fc72d0-a.oregon-postgres.render.com/foodtech_7rat"
 
-echo "🚀 Deploying FoodTech API to Fly.io"
+echo "🚀 Deploying FoodTech API to Fly.io (using Render PostgreSQL)"
 
 # Add flyctl to PATH
 export FLYCTL_INSTALL="$HOME/.fly"
@@ -31,20 +33,11 @@ if ! flyctl apps list | grep -q "$APP_NAME"; then
     flyctl apps create "$APP_NAME" --org personal
 fi
 
-# 4. Create PostgreSQL database
-if ! flyctl postgres list | grep -q "$DB_NAME"; then
-    echo "🐘 Creating PostgreSQL: $DB_NAME"
-    flyctl postgres create --name "$DB_NAME" --region lax --vm-size shared-cpu-1x --volume-size 3
+# 4. Set Render PostgreSQL connection string
+echo "🐘 Setting Render PostgreSQL connection string..."
+flyctl secrets set PostgreSql__ConnectionString="$RENDER_PG" --app "$APP_NAME"
 
-    echo "⏳ Waiting for database to be ready..."
-    sleep 30
-fi
-
-# 5. Attach database (sets DATABASE_URL secret automatically)
-echo "🔗 Attaching database..."
-flyctl postgres attach "$DB_NAME" --app "$APP_NAME"
-
-# 6. Set secrets (run these manually with your values)
+# 5. Set secrets (run these manually with your values)
 echo ""
 echo "🔑 SET THESE SECRETS MANUALLY:"
 echo "flyctl secrets set JwtSettings__Secret=\"YOUR_32_CHAR_SECRET\" --app $APP_NAME"
@@ -52,11 +45,11 @@ echo "flyctl secrets set QR__SecretKey=\"YOUR_32_CHAR_SECRET\" --app $APP_NAME"
 echo ""
 read -p "Press Enter after setting secrets..."
 
-# 7. Deploy
+# 6. Deploy
 echo "🚀 Deploying..."
 flyctl deploy --app "$APP_NAME" --dockerfile FoodTech.Api/Dockerfile
 
-# 8. Show status
+# 7. Show status
 echo ""
 echo "✅ Deployment complete!"
 flyctl status --app "$APP_NAME"

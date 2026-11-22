@@ -11,6 +11,8 @@ primary_region = "lax"  # Los Angeles - closest to Oregon PostgreSQL
   JwtSettings__Issuer = "foodtech-api"
   JwtSettings__Audience = "foodtech-app"
   JwtSettings__AccessTokenExpiryMinutes = "60"
+  # PostgreSQL connection string (set via flyctl secrets set)
+  # PostgreSql__ConnectionString = "postgresql://foodtech_7rat_user:4ZRyeEcTkCABnVXw91kL3r5LwUfbEnMs@dpg-dbsjd8lg1s2s73fc72d0-a.oregon-postgres.render.com/foodtech_7rat"
 
 [http_service]
   internal_port = 8080
@@ -32,5 +34,5 @@ primary_region = "lax"  # Los Angeles - closest to Oregon PostgreSQL
   cpu_kind = "shared"
   cpus = 1
 
-# PostgreSQL will be attached via fly postgres create
-# Connection string will be set as secret after DB creation
+# PostgreSQL: Use existing Render PostgreSQL (set via secrets)
+# flyctl secrets set PostgreSql__ConnectionString="postgresql://foodtech_7rat_user:4ZRyeEcTkCABnVXw91kL3r5LwUfbEnMs@dpg-dbsjd8lg1s2s73fc72d0-a.oregon-postgres.render.com/foodtech_7rat"

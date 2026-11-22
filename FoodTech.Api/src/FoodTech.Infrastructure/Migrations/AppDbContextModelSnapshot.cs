@@ -20,7 +20,7 @@ namespace FoodTech.Infrastructure.Migrations
                 .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "category", new[] { "breakfast", "lunch", "snacks", "beverages", "dinner" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "category", new[] { "breakfast", "lunch", "snacks", "beverages", "dinner", "desserts", "main_course", "starters" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "diet_type", new[] { "veg", "non_veg", "vegan", "gluten_free" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "order_status", new[] { "pending", "confirmed", "preparing", "ready", "completed", "cancelled" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "payment_method", new[] { "upi", "cash" });

@@ -24,32 +24,112 @@ var builder = WebApplication.CreateBuilder(args);
 var databaseUrl = builder.Configuration["DATABASE_URL"];
 if (!string.IsNullOrEmpty(databaseUrl))
 {
-    builder.Configuration["PostgreSql:ConnectionString"] = ConvertFlyPostgresUrl(databaseUrl);
+    builder.Configuration["PostgreSql:ConnectionString"] = ConvertPostgresUrl(databaseUrl);
 }
 
-// Convert Fly.io postgres:// URI to Npgsql connection string
-static string ConvertFlyPostgresUrl(string uri)
+// Also convert PostgreSql:ConnectionString if it's in URI format (postgres:// or postgresql://)
+var pgConnStr = builder.Configuration["PostgreSql:ConnectionString"];
+if (!string.IsNullOrEmpty(pgConnStr) && (pgConnStr.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) || pgConnStr.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase)))
+{
+    builder.Configuration["PostgreSql:ConnectionString"] = ConvertPostgresUrl(pgConnStr);
+}
+
+// Convert postgres:// or postgresql:// URI to Npgsql connection string
+static string ConvertPostgresUrl(string uri)
 {
     try
     {
-        var uriBuilder = new UriBuilder(uri);
+        // Manual parsing to handle postgresql:// scheme which UriBuilder doesn't recognize
+        // Format: postgresql://user:password@host:port/database?sslmode=require
 
-        // Parse query string manually (HttpUtility not available in .NET Core)
-        var query = uriBuilder.Query.TrimStart('?');
-        var queryParams = new Dictionary<string, string>();
-        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        string scheme;
+        string rest;
+        if (uri.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
         {
-            var kv = pair.Split('=', 2);
-            if (kv.Length == 2)
-                queryParams[Uri.UnescapeDataString(kv[0])] = Uri.UnescapeDataString(kv[1]);
+            scheme = "postgresql";
+            rest = uri.Substring("postgresql://".Length);
+        }
+        else if (uri.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+        {
+            scheme = "postgres";
+            rest = uri.Substring("postgres://".Length);
+        }
+        else
+        {
+            throw new FormatException("Invalid PostgreSQL URI scheme");
+        }
+
+        // Split userinfo@host:port/database?query
+        var atIndex = rest.IndexOf('@');
+        if (atIndex == -1)
+            throw new FormatException("Missing @ in PostgreSQL URI");
+
+        var userInfo = rest.Substring(0, atIndex);
+        var hostPart = rest.Substring(atIndex + 1);
+
+        // Parse username:password
+        var colonIndex = userInfo.IndexOf(':');
+        string username, password;
+        if (colonIndex == -1)
+        {
+            username = Uri.UnescapeDataString(userInfo);
+            password = "";
+        }
+        else
+        {
+            username = Uri.UnescapeDataString(userInfo.Substring(0, colonIndex));
+            password = Uri.UnescapeDataString(userInfo.Substring(colonIndex + 1));
+        }
+
+        // Split host:port/database?query
+        var slashIndex = hostPart.IndexOf('/');
+        if (slashIndex == -1)
+            throw new FormatException("Missing / in PostgreSQL URI");
+
+        var hostPort = hostPart.Substring(0, slashIndex);
+        var dbAndQuery = hostPart.Substring(slashIndex + 1);
+
+        // Parse host:port
+        string host;
+        int port = 5432; // Default PostgreSQL port
+        var portColonIndex = hostPort.LastIndexOf(':');
+        if (portColonIndex != -1 && !hostPort.Contains("]")) // Handle IPv6
+        {
+            host = hostPort.Substring(0, portColonIndex);
+            if (!int.TryParse(hostPort.Substring(portColonIndex + 1), out port))
+                port = 5432;
+        }
+        else
+        {
+            host = hostPort;
+        }
+
+        // Parse database?query
+        var questionIndex = dbAndQuery.IndexOf('?');
+        string database;
+        var queryParams = new Dictionary<string, string>();
+        if (questionIndex == -1)
+        {
+            database = Uri.UnescapeDataString(dbAndQuery);
+        }
+        else
+        {
+            database = Uri.UnescapeDataString(dbAndQuery.Substring(0, questionIndex));
+            var query = dbAndQuery.Substring(questionIndex + 1);
+            foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = pair.Split('=', 2);
+                if (kv.Length == 2)
+                    queryParams[Uri.UnescapeDataString(kv[0])] = Uri.UnescapeDataString(kv[1]);
+            }
         }
 
         var builder = new System.Data.Common.DbConnectionStringBuilder();
-        builder["Host"] = uriBuilder.Host;
-        builder["Port"] = uriBuilder.Port.ToString();
-        builder["Database"] = uriBuilder.Path.TrimStart('/');
-        builder["Username"] = uriBuilder.UserName;
-        builder["Password"] = uriBuilder.Password;
+        builder["Host"] = host;
+        builder["Port"] = port.ToString();
+        builder["Database"] = database;
+        builder["Username"] = username;
+        builder["Password"] = password;
 
         // Handle sslmode from query string
         if (queryParams.TryGetValue("sslmode", out var sslMode))
@@ -58,7 +138,7 @@ static string ConvertFlyPostgresUrl(string uri)
         }
         else
         {
-            builder["Ssl Mode"] = "Require"; // Default for Fly.io
+            builder["Ssl Mode"] = "Require"; // Default for Render
         }
 
         builder["Trust Server Certificate"] = "true";
@@ -240,9 +320,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
-
-// Listen on all interfaces for emulator access
-app.Urls.Add("http://0.0.0.0:5083");
 
 app.Run();
 

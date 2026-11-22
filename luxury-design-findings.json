@@ -1,0 +1,131 @@
+{
+  "file_path": "mobile/src/app/employee/checkout.tsx",
+  "findings": {
+    "elysian_table_references": [],
+    "cormorant_references": [
+      "Line 346: fontFamily: typography.serifBold (which maps to 'CormorantGaramond_700Bold')",
+      "Line 365: fontFamily: typography.serifBold",
+      "Line 628: fontFamily: typography.serifBold",
+      "Line 674: fontFamily: typography.serifBold",
+      "Line 680: fontFamily: typography.serifBold",
+      "Line 717: fontFamily: typography.serifBold",
+      "colors.ts Line 120-121: serif: 'CormorantGaramond_600SemiBold', serifBold: 'CormorantGaramond_700Bold'"
+    ],
+    "plusjakarta_references": [
+      "Line 353: fontFamily: typography.sans (which maps to 'PlusJakartaSans_400Regular')",
+      "Line 426: fontFamily: typography.sansSemiBold",
+      "Line 436: fontFamily: typography.sans",
+      "Line 481: fontFamily: typography.sansSemiBold",
+      "Line 486: fontFamily: typography.sans",
+      "Line 542: fontFamily: typography.sansSemiBold",
+      "Line 547: fontFamily: typography.sans",
+      "Line 579: fontFamily: typography.sans",
+      "Line 591: fontFamily: typography.sans",
+      "Line 603: fontFamily: typography.sans",
+      "Line 649: fontFamily: typography.sans",
+      "Line 659: fontFamily: typography.sansMedium",
+      "Line 664: fontFamily: typography.sansSemiBold",
+      "Line 691: fontFamily: typography.sans",
+      "Line 724: fontFamily: typography.sans",
+      "colors.ts Line 122-125: sans: 'PlusJakartaSans_400Regular', sansMedium: 'PlusJakartaSans_500Medium', sansSemiBold: 'PlusJakartaSans_600SemiBold', sansBold: 'PlusJakartaSans_700Bold'"
+    ],
+    "gold_references": [
+      "Line 17: import { colors, spacing, radius, typography, shadows } from '@/constants/colors'",
+      "Line 104: color={colors.gold.primary}",
+      "Line 224: color={colors.gold.primary}",
+      "Line 339: backgroundColor: 'rgba(197, 160, 89, 0.1)'",
+      "Line 343: borderColor: 'rgba(197, 160, 89, 0.2)'",
+      "Line 443: color: colors.gold.primary",
+      "Line 473: borderColor: colors.gold.primary",
+      "Line 474: backgroundColor: 'rgba(197, 160, 89, 0.1)'",
+      "Line 500: borderColor: colors.gold.primary",
+      "Line 506: backgroundColor: colors.gold.primary",
+      "Line 522: borderColor: colors.gold.primary",
+      "Line 523: backgroundColor: 'rgba(197, 160, 89, 0.1)'",
+      "Line 561: borderColor: colors.gold.primary",
+      "Line 567: backgroundColor: colors.gold.primary",
+      "Line 611: borderColor: 'rgba(197, 160, 89, 0.3)'",
+      "Line 613: shadowColor: colors.gold.primary",
+      "Line 682: color: colors.gold.primary",
+      "Line 81: <GoldCTAButton (component usage)",
+      "Line 276: <GoldCTAButton (component usage)",
+      "colors.ts Line 3-8: gold palette with primary: '#C5A059', shimmer: '#E6C991', light: '#F5E6C8', dark: '#A0803F'",
+      "colors.ts Line 80-84: gradients including goldShimmer and goldOverlay",
+      "colors.ts Line 88-90: shadows including gold and goldSubtle"
+    ],
+    "c5a059_references": [
+      "Line 104: color={colors.gold.primary} (maps to #C5A059)",
+      "Line 224: color={colors.gold.primary}",
+      "Line 339: backgroundColor: 'rgba(197, 160, 89, 0.1)'",
+      "Line 343: borderColor: 'rgba(197, 160, 89, 0.2)'",
+      "Line 443: color: colors.gold.primary",
+      "Line 473: borderColor: colors.gold.primary",
+      "Line 474: backgroundColor: 'rgba(197, 160, 89, 0.1)'",
+      "Line 500: borderColor: colors.gold.primary",
+      "Line 506: backgroundColor: colors.gold.primary",
+      "Line 522: borderColor: colors.gold.primary",
+      "Line 523: backgroundColor: 'rgba(197, 160, 89, 0.1)'",
+      "Line 561: borderColor: colors.gold.primary",
+      "Line 567: backgroundColor: colors.gold.primary",
+      "Line 611: borderColor: 'rgba(197, 160, 89, 0.3)'",
+      "Line 613: shadowColor: colors.gold.primary",
+      "Line 682: color: colors.gold.primary",
+      "colors.ts Line 4: primary: '#C5A059'",
+      "colors.ts Line 48: DEFAULT: '#C5A059'"
+    ],
+    "luxury_design_patterns": [
+      "Hero Section (Lines 100-109): Full-width hero with gradient background, centered content, serif italic title",
+      "Hero Gradient (Lines 314-325): Absolute positioned gradient layer with onyx background, 2xl border radius",
+      "Hero Icon Wrapper (Lines 335-344): Circular container with gold-tinted background and border (rgba gold 0.1/0.2)",
+      "Serif Italic Typography (Lines 346-350, 365-368, 628-631, 674-678, 680-684): Cormorant Garamond Bold italic for all section titles and hero title",
+      "Gold Accent Borders (Lines 472-474, 499-501, 521-523, 560-562): Selected states use gold primary border with rgba gold backgrounds",
+      "Gold Radio Buttons (Lines 502-507, 563-568): Custom radio with gold inner dot on selection",
+      "Gold Shadow on Summary Card (Lines 611-617): borderColor with rgba gold 0.3, shadowColor using colors.gold.primary, shadowOpacity 0.15, shadowRadius 16",
+      "Gold CTA Buttons (Lines 81, 276-283): GoldCTAButton component usage for primary actions",
+      "Gold Item Totals (Line 443): Order item totals rendered in gold primary color with serifBold font",
+      "Gradient Definitions (colors.ts Lines 80-84): luxury, goldShimmer, card, goldOverlay gradients defined",
+      "Gold Shadows (colors.ts Lines 88-90): gold and goldSubtle shadow definitions with rgba(197, 160, 89, 0.3/0.15)"
+    ],
+    "color_usage_from_colors_ts": {
+      "dark": {
+        "charcoal": "Line 295: backgroundColor: colors.dark.charcoal (main container background)",
+        "onyx": "Lines 320, 372, 449, 609: backgroundColor: colors.dark.onyx (cards, hero gradient)",
+        "deepCharcoal": "Lines 401, 406, 467, 516, 571, 597: backgroundColor: colors.dark.deepCharcoal (input backgrounds, option backgrounds)",
+        "surface": "Not directly used in checkout.tsx"
+      },
+      "gold": {
+        "primary": "Used extensively - 18+ occurrences for borders, text, backgrounds, shadows",
+        "shimmer": "Not directly used in checkout.tsx (defined in colors.ts)",
+        "light": "Not directly used in checkout.tsx",
+        "dark": "Not directly used in checkout.tsx"
+      },
+      "text": {
+        "primary": "Lines 348, 428, 483, 544, 630, 666, 676, 719: color: colors.text.primary (white text)",
+        "secondary": "Lines 661: color: colors.text.secondary (summary labels)",
+        "muted": "Lines 355, 438, 488, 549, 593, 693, 726: color: colors.text.muted (subtext, hints)",
+        "disabled": "Not used in checkout.tsx",
+        "onGold": "Not used in checkout.tsx"
+      },
+      "border": {
+        "subtle": "Lines 312, 388, 469, 519, 670: borderColor: colors.border.subtle",
+        "default": "Lines 374, 451, 573, 599: borderColor: colors.border.default",
+        "strong": "Not used in checkout.tsx",
+        "gold": "Line 611: borderColor: 'rgba(197, 160, 89, 0.3)' (equivalent to border.gold)"
+      },
+      "diet": {
+        "veg": "Line 128: Badge variant 'veg' uses colors.diet.veg",
+        "nonveg": "Line 128: Badge variant 'nonveg' uses colors.diet.nonveg",
+        "vegan": "Line 128: Badge variant 'vegan' uses colors.diet.vegan",
+        "gf": "Line 128: Badge variant 'gf' uses colors.diet.gf"
+      },
+      "status": "Not directly used in checkout.tsx",
+      "success": "Lines 251, 650: color: colors.success (pickup note icon/text)",
+      "error": "Not used in checkout.tsx",
+      "warning": "Not used in checkout.tsx",
+      "info": "Not used in checkout.tsx",
+      "primary": "Line 48: DEFAULT: '#C5A059' (semantic alias)",
+      "secondary": "Not used in checkout.tsx",
+      "surface": "Not used in checkout.tsx"
+    }
+  }
+}
